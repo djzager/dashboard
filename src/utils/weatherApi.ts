@@ -65,17 +65,28 @@ const formatTime = (timeString: string): string => {
 
 export const fetchWeatherData = async (): Promise<WeatherData> => {
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`
+    // In production (Netlify), use the weather function which proxies Open-Meteo
+    // In development, use Open-Meteo directly
+    let url: string
+    
+    if (import.meta.env.PROD && window.location.hostname !== 'localhost') {
+      // Use Netlify function in production (which calls Open-Meteo)
+      url = `${window.location.origin}/weather`
+    } else {
+      // Use Open-Meteo directly in development
+      url = `https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`
+    }
     
     const response = await fetch(url)
 
     if (!response.ok) {
-      throw new Error(`Open-Meteo API error! status: ${response.status}`)
+      throw new Error(`Weather API error! status: ${response.status}`)
     }
 
     const data: OpenMeteoResponse = await response.json()
-    const weatherInfo = getWeatherDescription(data.current.weather_code)
     
+    // Both development and production now use Open-Meteo API format
+    const weatherInfo = getWeatherDescription(data.current.weather_code)
     return {
       temperature: Math.round(data.current.temperature_2m),
       temperatureFeelsLike: Math.round(data.current.apparent_temperature),

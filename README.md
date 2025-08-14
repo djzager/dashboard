@@ -28,7 +28,6 @@ Internal dashboard for fire department operations with Google OAuth authenticati
    - Enable Google+ API
    - Create OAuth 2.0 credentials
    - Get your FirstDue SizeUp API token
-   - Get a free OpenWeatherMap API key from https://openweathermap.org/api
    - Copy `.env.example` to `.env` and configure:
      ```
      VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
@@ -36,7 +35,6 @@ Internal dashboard for fire department operations with Google OAuth authenticati
      
      # Server-side environment variables (for proxy server)
      FD_TOKEN=your_firstdue_bearer_token_here
-     OPENWEATHER_API_KEY=your_openweather_api_key_here
      PROXY_PORT=3001
      ```
 

@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import serverless from 'serverless-http'
 
 // Load environment variables
 dotenv.config()
@@ -18,31 +19,24 @@ app.use(cors({
 app.use(express.json())
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'FirstDue Proxy' })
 })
 
-// Weather endpoint for Culpeper, VA
+// Weather endpoint for Culpeper, VA using Open-Meteo
 app.get('/weather', async (req, res) => {
   try {
-    const apiKey = process.env.OPENWEATHER_API_KEY
-    
-    if (!apiKey) {
-      return res.status(500).json({ 
-        error: 'OPENWEATHER_API_KEY not configured on server' 
-      })
-    }
-
     // Coordinates for 18230 Birmingham Road, Culpeper, VA 22701
     const lat = 38.4707
     const lon = -78.0169
     
-    const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=imperial`
+    // Use Open-Meteo API (free, no API key required)
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`
     
     const response = await fetch(weatherUrl)
 
     if (!response.ok) {
-      throw new Error(`OpenWeather API error: ${response.status} ${response.statusText}`)
+      throw new Error(`Open-Meteo API error: ${response.status} ${response.statusText}`)
     }
 
     const data = await response.json()
@@ -115,8 +109,17 @@ app.use('/api', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => {
-  console.log(`🚀 FirstDue Proxy server running on http://localhost:${PORT}`)
-  console.log(`🔗 Frontend should point to: http://localhost:${PORT}/api`)
-  console.log(`🏥 Health check: http://localhost:${PORT}/health`)
-})
+// Export for Netlify Functions
+export const handler = serverless(app)
+
+// Export the app for local development
+export default app
+
+// Only start the server if this file is run directly (not imported)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  app.listen(PORT, () => {
+    console.log(`🚀 FirstDue Proxy server running on http://localhost:${PORT}`)
+    console.log(`🔗 Frontend should point to: http://localhost:${PORT}/api`)
+    console.log(`🏥 Health check: http://localhost:${PORT}/health`)
+  })
+}
