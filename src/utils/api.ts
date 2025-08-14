@@ -6,7 +6,18 @@ import { UnitDispatch } from '../types/unit-dispatch'
 import { ScheduleResponse, StaffedPosition } from '../types/schedule'
 
 // Use proxy server to avoid CORS issues
-const PROXY_URL = import.meta.env.VITE_PROXY_URL || 'http://localhost:3001'
+// In production (Netlify), use the current origin for Netlify Functions
+// In development, use the local proxy server
+const getProxyUrl = () => {
+  if (import.meta.env.PROD && window.location.hostname !== 'localhost') {
+    // Production environment (Netlify) - use current origin
+    return window.location.origin
+  }
+  // Development environment - use local proxy or environment variable
+  return import.meta.env.VITE_PROXY_URL || 'http://localhost:3001'
+}
+
+const PROXY_URL = getProxyUrl()
 
 // Check if we should use mock data based on environment variable
 const shouldUseMockData = (): boolean => {
@@ -208,7 +219,7 @@ const getMockApparatusData = (): ApparatusWithStatus[] => {
       unit_code: "RE16",
       use_code: "1",
       use_name: "Suppression",
-      status: "responding",
+      status: "in_service",
       location: "En Route",
       last_updated: "2:25 PM"
     },

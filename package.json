@@ -7,7 +7,7 @@
     "dev": "VITE_USE_MOCK_DATA=true vite",
     "dev:api": "concurrently \"npm run proxy\" \"npm run dev:real\"",
     "dev:real": "vite",
-    "proxy": "node server/proxy.js",
+    "proxy": "node netlify/functions/proxy.js",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
@@ -18,7 +18,8 @@
     "js-cookie": "^3.0.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.1"
+    "react-router-dom": "^6.20.1",
+    "serverless-http": "^3.2.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

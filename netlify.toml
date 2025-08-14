@@ -1,0 +1,21 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/proxy/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/weather"
+  to = "/.netlify/functions/proxy/weather"
+  status = 200
+
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/proxy/health"
+  status = 200
