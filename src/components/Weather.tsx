@@ -13,8 +13,8 @@ const Weather: React.FC<WeatherProps> = ({ className = '' }) => {
 
   useEffect(() => {
     fetchWeather()
-    // Refresh weather every 10 minutes
-    const interval = setInterval(fetchWeather, 10 * 60 * 1000)
+    // Refresh weather every hour
+    const interval = setInterval(fetchWeather, 60 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
 

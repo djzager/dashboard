@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Incident } from '../types/incident'
-import { isOurUnit } from '../utils/api'
+import { UnitDispatch } from '../types/unit-dispatch'
+import { isOurUnit, fetchUnitsByDispatch } from '../utils/api'
 import { parseDispatchComments, getStatusColor, getUnitLatestStatus } from '../utils/dispatch-status'
 
 interface IncidentDrawerProps {
@@ -17,6 +18,8 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
   isNewDispatch = false 
 }) => {
   const [timeElapsed, setTimeElapsed] = useState(0)
+  const [loadingUnitDispatch, setLoadingUnitDispatch] = useState(false)
+  const [drawerUnitDispatch, setDrawerUnitDispatch] = useState<UnitDispatch | null>(null)
 
   // Timer to track time since dispatch (for all open dispatches)
   useEffect(() => {
@@ -37,6 +40,36 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
     const interval = setInterval(updateTimer, 1000)
 
     return () => clearInterval(interval)
+  }, [isOpen, incident])
+
+  // Fetch unit dispatch data if not already available when drawer opens
+  useEffect(() => {
+    if (!isOpen || !incident) {
+      setDrawerUnitDispatch(null)
+      return
+    }
+
+    // If we already have unit dispatch data, use it
+    if (incident.unitDispatch) {
+      setDrawerUnitDispatch(incident.unitDispatch)
+      return
+    }
+
+    // Otherwise, fetch it on-demand for this drawer view
+    const fetchUnitDispatchData = async () => {
+      setLoadingUnitDispatch(true)
+      try {
+        const unitDispatch = await fetchUnitsByDispatch(incident.dispatch.id)
+        setDrawerUnitDispatch(unitDispatch)
+      } catch (error) {
+        console.error('Failed to fetch unit dispatch data for drawer:', error)
+        setDrawerUnitDispatch(null)
+      } finally {
+        setLoadingUnitDispatch(false)
+      }
+    }
+
+    fetchUnitDispatchData()
   }, [isOpen, incident])
 
   // Auto-close after 10 minutes for new dispatches
@@ -69,12 +102,15 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
 
   if (!incident) return null
 
-  const { dispatch, fireIncident, unitDispatch } = incident
+  const { dispatch } = incident
   const isOurUnitInvolved = isOurUnit(dispatch.unit_codes)
   
-  // Parse dispatch comments to get unit statuses (only for open dispatches)
-  const unitStatuses = dispatch.status_code === 'open' && fireIncident?.dispatch_comment
-    ? parseDispatchComments(fireIncident.dispatch_comment, dispatch.unit_codes)
+  // Use drawer-specific unit dispatch data (either from incident or fetched on-demand)
+  const unitDispatch = drawerUnitDispatch
+  
+  // Parse dispatch comments to get unit statuses
+  const unitStatuses = unitDispatch?.call_notes
+    ? parseDispatchComments(unitDispatch.call_notes, dispatch.unit_codes)
     : new Map()
 
   return (
@@ -88,7 +124,7 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
       />
       
       {/* Drawer */}
-      <div className={`fixed right-0 top-0 h-full w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${
+      <div className={`fixed right-0 top-0 h-full w-4/5 max-w-4xl bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         
@@ -96,25 +132,7 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
         <div className={`px-6 py-4 border-b border-gray-200 dark:border-gray-600 ${
           isNewDispatch ? 'bg-red-50 dark:bg-red-900/20' : ''
         }`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              {isNewDispatch && (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40">
-                  <svg className="h-4 w-4 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                  </svg>
-                </div>
-              )}
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {isNewDispatch ? '🚨 New Emergency Dispatch' : 'Incident Details'}
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {dispatch.type}
-                </p>
-              </div>
-            </div>
-            
+          <div className="flex items-center justify-end">
             {/* Close button */}
             <button
               onClick={onClose}
@@ -141,8 +159,8 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+          <div className="h-full flex flex-col space-y-6">
             
             {/* Basic Info */}
             <div>
@@ -182,9 +200,7 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                     <h4 className="font-medium text-gray-900 dark:text-white mb-2">Incident Info</h4>
                     <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                       <div>Dispatch ID: {dispatch.id}</div>
-                      {fireIncident?.incident_number && (
-                        <div>Incident: {fireIncident.incident_number}</div>
-                      )}
+                      {/* Remove incident number display since we're eliminating fireIncident calls */}
                       <div>Type: {dispatch.incident_type_code}</div>
                       {dispatch.alarm_level && <div>Alarm: {dispatch.alarm_level}</div>}
                       <div>Created: {formatTime(dispatch.created_at)}</div>
@@ -236,7 +252,17 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
             </div>
 
             {/* Unit Status Information */}
-            {unitDispatch && unitDispatch.units && unitDispatch.units.length > 0 && (
+            {loadingUnitDispatch ? (
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Responder Status</h4>
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                    <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading responder data...</span>
+                  </div>
+                </div>
+              </div>
+            ) : unitDispatch && unitDispatch.units && unitDispatch.units.length > 0 ? (
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-3">Responder Status</h4>
                 <div className="space-y-3">
@@ -275,7 +301,7 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                   })}
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Message/Details */}
             {dispatch.message && (
@@ -288,13 +314,23 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
             )}
 
             {/* Dispatch Comments Timeline */}
-            {fireIncident?.dispatch_comment && (
+            {loadingUnitDispatch ? (
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-3">Dispatch Timeline</h4>
                 <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                  <div className="space-y-2 text-sm font-mono text-gray-600 dark:text-gray-400">
-                    {fireIncident.dispatch_comment
-                      .split('\n')
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                    <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading timeline data...</span>
+                  </div>
+                </div>
+              </div>
+            ) : unitDispatch?.call_notes ? (
+              <div className="flex flex-col flex-1 min-h-0">
+                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Dispatch Timeline</h4>
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg flex-1 min-h-0">
+                  <div className="h-full overflow-y-auto space-y-2 text-sm font-mono text-gray-600 dark:text-gray-400">
+                    {unitDispatch.call_notes
+                      .split(/\\n|\n/)
                       .map((line, index) => (
                         <div key={index} className="border-l-2 border-gray-300 dark:border-gray-600 pl-3">
                           {line}
@@ -303,7 +339,7 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
 
           </div>
         </div>

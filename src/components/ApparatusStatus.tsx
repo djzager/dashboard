@@ -13,8 +13,7 @@ const ApparatusStatus: React.FC<ApparatusStatusProps> = ({ className = '' }) => 
 
   useEffect(() => {
     fetchApparatusData()
-    const interval = setInterval(fetchApparatusData, 60000) // Update every minute
-    return () => clearInterval(interval)
+    // No automatic polling - only via manual refresh button
   }, [])
 
   const fetchApparatusData = async () => {

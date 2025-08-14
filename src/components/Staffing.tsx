@@ -14,7 +14,7 @@ const Staffing: React.FC<StaffingProps> = ({ className = '' }) => {
 
   useEffect(() => {
     fetchScheduleData()
-    const interval = setInterval(fetchScheduleData, 5 * 60 * 1000) // Update every 5 minutes
+    const interval = setInterval(fetchScheduleData, 60 * 1000) // Update every minute
     return () => clearInterval(interval)
   }, [])
 
