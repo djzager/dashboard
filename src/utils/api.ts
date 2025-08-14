@@ -378,17 +378,15 @@ export const getIncidentPage = async (url?: string, since?: string): Promise<Inc
   try {
     const result = await fetchDispatchPage(url, since)
     
-    // Fetch fire incident and unit data only for open dispatches
+    // Fetch fire incident and unit data only for open dispatches with our units
     const incidents = await Promise.all(
       result.dispatches.map(async (dispatch) => {
         if (dispatch.status_code === 'open') {
-          const [fireIncident, unitDispatch] = await Promise.all([
-            fetchFireIncident(dispatch.xref_id),
-            fetchUnitsByDispatch(dispatch.id)
-          ])
+          // Fetch unit dispatches for all open dispatches (since we need call_notes and responder info)
+          const unitDispatch = await fetchUnitsByDispatch(dispatch.id)
           return {
             dispatch,
-            fireIncident: fireIncident || undefined,
+            fireIncident: undefined, // No longer fetching fire incidents
             unitDispatch: unitDispatch || undefined
           }
         } else {
@@ -417,17 +415,15 @@ export const getIncidents = async (since?: string): Promise<Incident[]> => {
   try {
     const dispatches = await fetchDispatches(since)
     
-    // Fetch fire incident and unit data only for open dispatches
+    // Fetch fire incident and unit data only for open dispatches with our units
     const incidents = await Promise.all(
       dispatches.map(async (dispatch) => {
         if (dispatch.status_code === 'open') {
-          const [fireIncident, unitDispatch] = await Promise.all([
-            fetchFireIncident(dispatch.xref_id),
-            fetchUnitsByDispatch(dispatch.id)
-          ])
+          // Fetch unit dispatches for all open dispatches (since we need call_notes and responder info)
+          const unitDispatch = await fetchUnitsByDispatch(dispatch.id)
           return {
             dispatch,
-            fireIncident: fireIncident || undefined,
+            fireIncident: undefined, // No longer fetching fire incidents
             unitDispatch: unitDispatch || undefined
           }
         } else {
@@ -465,7 +461,7 @@ const getMockData = (): Dispatch[] => {
       longitude: -78.024778,
       unit_codes: ["RE16", "A16", "K16", "CMD16", "E01", "L01"], // Our units first
       incident_type_code: "FHOU",
-      status_code: "open",
+      status_code: "open" as const,
       xref_id: "CFS2575999",
       created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
       radio_channel: "FIRE-TAC-1",
@@ -489,7 +485,7 @@ const getMockData = (): Dispatch[] => {
       longitude: -78.018456,
       unit_codes: ["E03", "A05", "M07"], // No Station 16 units
       incident_type_code: "CHEST",
-      status_code: "open",
+      status_code: "open" as const,
       xref_id: "CFS2576001", 
       created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
       radio_channel: "EMS-TAC-2",
@@ -513,7 +509,7 @@ const getMockData = (): Dispatch[] => {
       longitude: -78.014778,
       unit_codes: ["A16", "E12", "PD50"], // Had our units but now closed
       incident_type_code: "MVA",
-      status_code: "closed",
+      status_code: "closed" as const,
       xref_id: "CFS2575873",
       created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
       radio_channel: "FIRE-TAC-2",
@@ -669,7 +665,7 @@ const getMockUnitDispatch = (dispatchId: number): UnitDispatch => {
     return {
       id: 39330236,
       type: "STRUCTURE FIRE",
-      status_code: "open",
+      status_code: "open" as const,
       incident_type_code: "FHOU",
       unit_codes: ["RE16", "A16", "K16", "CMD16", "E01", "L01"],
       created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
@@ -737,7 +733,7 @@ const getMockUnitDispatch = (dispatchId: number): UnitDispatch => {
     return {
       id: 39330237,
       type: "MEDICAL EMERGENCY",
-      status_code: "open",
+      status_code: "open" as const,
       incident_type_code: "CHEST",
       unit_codes: ["E03", "A05", "M07"],
       created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),

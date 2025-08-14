@@ -15,13 +15,13 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
   className = "",
   onClick,
 }) => {
-  const { dispatch, fireIncident, unitDispatch } = incident;
+  const { dispatch, unitDispatch } = incident;
   const isOurUnitInvolved = isOurUnit(dispatch.unit_codes);
   const isClosed = dispatch.status_code === "closed";
   
   // Parse dispatch comments to get unit statuses (only for open dispatches)
-  const unitStatuses = dispatch.status_code === 'open' && fireIncident?.dispatch_comment
-    ? parseDispatchComments(fireIncident.dispatch_comment, dispatch.unit_codes)
+  const unitStatuses = dispatch.status_code === 'open' && unitDispatch?.call_notes
+    ? parseDispatchComments(unitDispatch.call_notes, dispatch.unit_codes)
     : new Map();
 
   // Helper function to get the latest status for a unit
@@ -77,11 +77,7 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
                 <span className="bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xs font-mono">
                   Dispatch ID: {dispatch.id}
                 </span>
-                {fireIncident?.incident_number && (
-                  <span className="bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xs font-mono">
-                    Incident: {fireIncident.incident_number}
-                  </span>
-                )}
+                {/* Remove incident number display since we're eliminating fireIncident calls */}
                 {isOurUnitInvolved && (
                   <span className="bg-blue-500 text-white px-2 py-1 rounded text-xs">
                     OUR UNITS
@@ -179,11 +175,11 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
         </div>
 
         {/* Dispatch Comments - Right Side, Fixed Height with Scroll */}
-        {fireIncident?.dispatch_comment && (
+        {unitDispatch?.call_notes && (
           <div className="flex-1 border-l border-gray-200 dark:border-gray-600 pl-4 min-w-0 flex flex-col">
             <div className="h-40 overflow-y-auto bg-gray-50 dark:bg-gray-800 rounded p-3 text-sm text-gray-700 dark:text-gray-300">
-              {fireIncident.dispatch_comment
-                .split("\n")
+              {unitDispatch.call_notes
+                .split(/\\n|\n/)
                 .map((line, index) => (
                   <div key={index} className="mb-1 last:mb-0">
                     {line}

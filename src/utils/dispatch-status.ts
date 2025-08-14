@@ -91,7 +91,9 @@ const STATUS_PATTERNS: Record<string, RegExp[]> = {
   'clear': [
     /clear/i,
     /cleared/i,
-    /clear alarms/i
+    /clear alarms/i,
+    /complete/i,
+    /completed/i
   ]
 }
 
