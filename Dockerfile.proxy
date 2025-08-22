@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (proxy needs dev dependencies like express, cors)
+RUN npm ci
 
 # Copy proxy source
 COPY netlify/functions/proxy.js ./proxy.js

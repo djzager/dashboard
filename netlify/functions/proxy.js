@@ -11,7 +11,7 @@ const PORT = process.env.PROXY_PORT || 3001
 
 // Enable CORS for frontend
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'http://10.1.10.3:3000'],
   credentials: true,
   exposedHeaders: ['link', 'x-total-count', 'x-page', 'x-per-page', 'x-total-pages']
 }))
