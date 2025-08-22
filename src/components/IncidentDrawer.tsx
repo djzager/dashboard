@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Incident } from '../types/incident'
 import { UnitDispatch } from '../types/unit-dispatch'
 import { isOurUnit, fetchUnitsByDispatch } from '../utils/api'
-import { parseDispatchComments, getStatusColor, getUnitLatestStatus } from '../utils/dispatch-status'
+import { parseDispatchComments, getStatusColor, getUnitLatestStatus, getUnitStatusFromCallNotes } from '../utils/dispatch-status'
 
 interface IncidentDrawerProps {
   incident: Incident | null
@@ -124,7 +124,7 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
       />
       
       {/* Drawer */}
-      <div className={`fixed right-0 top-0 h-full w-4/5 max-w-4xl bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col ${
+      <div className={`fixed inset-0 bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         
@@ -215,34 +215,25 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
               <h4 className="font-medium text-gray-900 dark:text-white mb-3">Responding Units</h4>
               <div className="flex flex-wrap gap-2">
                 {dispatch.unit_codes.map((unit) => {
-                  const latestStatus = getUnitLatestStatus(unit, unitStatuses);
-                  const statusColor = latestStatus ? getStatusColor(latestStatus.status) : null;
                   const isOur = isOurUnit([unit]);
+                  const unitStatus = getUnitStatusFromCallNotes(unit, unitDispatch?.call_notes || null, isOur, true);
                   
                   return (
                     <div key={unit} className="flex flex-col items-center">
                       <span
                         className={`px-3 py-1 rounded text-sm font-medium border ${
-                          isOur
-                            ? statusColor 
-                              ? `${statusColor.className} border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800`
-                              : "bg-blue-500 text-white border-blue-600"
-                            : statusColor
-                              ? statusColor.className
+                          unitStatus
+                            ? `${unitStatus.className} ${unitStatus.borderClass}`
+                            : isOur
+                              ? "bg-blue-500 text-white border-blue-600"
                               : "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-500"
                         }`}
                       >
                         {unit}
                       </span>
-                      {latestStatus && (
+                      {unitStatus && (
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
-                          <div>{statusColor?.label || latestStatus.status}</div>
-                          <div>{latestStatus.timestamp}</div>
-                          {latestStatus.location && (
-                            <div className="truncate max-w-20" title={latestStatus.location}>
-                              {latestStatus.location}
-                            </div>
-                          )}
+                          <div>{unitStatus.label}</div>
                         </div>
                       )}
                     </div>

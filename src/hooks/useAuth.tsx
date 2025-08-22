@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { CredentialResponse } from '@react-oauth/google'
+import { CredentialResponse, useGoogleLogin } from '@react-oauth/google'
 import Cookies from 'js-cookie'
 
 interface User {
@@ -10,10 +10,12 @@ interface User {
 
 interface AuthContextType {
   user: User | null
+  accessToken: string | null
   login: () => void
   logout: () => void
   loading: boolean
   handleCredentialResponse: (credentialResponse: CredentialResponse) => void
+  requestCalendarAccess: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -32,12 +34,32 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null)
+  const [accessToken, setAccessToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: (response) => {
+      console.log('Calendar OAuth success:', response)
+      setAccessToken(response.access_token)
+      Cookies.set('accessToken', response.access_token, { expires: 1 }) // Store for 1 day
+    },
+    onError: (error) => {
+      console.error('Google OAuth login error:', error)
+    },
+    scope: 'https://www.googleapis.com/auth/calendar.readonly'
+  })
 
   useEffect(() => {
     const savedUser = Cookies.get('user')
+    const savedToken = Cookies.get('accessToken')
+    
+    console.log('Auth loading - savedUser:', !!savedUser, 'savedToken:', !!savedToken)
+    
     if (savedUser) {
       setUser(JSON.parse(savedUser))
+    }
+    if (savedToken) {
+      setAccessToken(savedToken)
     }
     setLoading(false)
   }, [])
@@ -61,6 +83,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       setUser(userData)
       Cookies.set('user', JSON.stringify(userData), { expires: 7 })
+      
+      // After successful login, also try to get calendar permissions
+      console.log('User logged in, requesting calendar permissions...')
+      // Use setTimeout to ensure this happens after the login flow completes
+      setTimeout(() => {
+        googleLogin()
+      }, 100)
     } catch (error) {
       console.error('Error parsing credential:', error)
     }
@@ -73,15 +102,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = () => {
     setUser(null)
+    setAccessToken(null)
     Cookies.remove('user')
+    Cookies.remove('accessToken')
+  }
+
+  const requestCalendarAccess = () => {
+    console.log('Manually requesting calendar access...')
+    googleLogin()
   }
 
   const value: AuthContextType = {
     user,
+    accessToken,
     login,
     logout,
     loading,
-    handleCredentialResponse
+    handleCredentialResponse,
+    requestCalendarAccess
   }
 
   return (
