@@ -61,8 +61,8 @@ const Weather: React.FC<WeatherProps> = ({ className = '' }) => {
   }
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 ${className}`}>
-      <div className="flex justify-between items-center mb-4">
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex flex-col h-full ${className}`}>
+      <div className="flex justify-between items-center mb-4 flex-shrink-0">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Weather</h2>
         <button 
           onClick={fetchWeather}
@@ -76,79 +76,58 @@ const Weather: React.FC<WeatherProps> = ({ className = '' }) => {
       </div>
 
       {weather && (
-        <div className="space-y-4">
-          {/* Main temperature display */}
-          <div className="text-center">
-            <div className="flex items-center justify-center space-x-3 mb-2">
+        <div className="flex-1 flex flex-col justify-between">
+          {/* Main temperature display - more compact */}
+          <div className="text-center mb-4">
+            <div className="flex items-center justify-center space-x-2 mb-2">
               {weather.icon && (
-                <img 
-                  src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
-                  alt={weather.description}
-                  className="w-16 h-16"
-                />
+                <div className="w-12 h-12 bg-orange-400 rounded-full flex items-center justify-center">
+                  <div className="text-white text-2xl">☀</div>
+                </div>
               )}
               <div>
-                <div className="text-4xl font-bold text-gray-800 dark:text-white">
+                <div className="text-3xl font-bold text-gray-800 dark:text-white">
                   {weather.temperature}°F
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300">
+                <div className="text-xs text-gray-600 dark:text-gray-300">
                   Feels like {weather.temperatureFeelsLike}°F
                 </div>
               </div>
             </div>
-            <div className="text-gray-600 dark:text-gray-300 mb-2 capitalize">
+            <div className="text-sm font-medium text-gray-600 dark:text-gray-300 capitalize">
               {weather.description}
             </div>
           </div>
 
-          {/* Weather details grid */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-              <div className="text-gray-500 dark:text-gray-400 text-xs uppercase font-medium">Wind</div>
-              <div className="font-medium text-gray-800 dark:text-white">
+          {/* Compact weather grid */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded text-center">
+              <div className="text-blue-600 dark:text-blue-400 font-semibold">WIND</div>
+              <div className="font-bold text-blue-800 dark:text-blue-200">
                 {weather.windSpeed} mph {weather.windDirectionText}
               </div>
             </div>
             
-            <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-              <div className="text-gray-500 dark:text-gray-400 text-xs uppercase font-medium">Humidity</div>
-              <div className="font-medium text-gray-800 dark:text-white">
+            <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded text-center">
+              <div className="text-blue-600 dark:text-blue-400 font-semibold">HUMIDITY</div>
+              <div className="font-bold text-blue-800 dark:text-blue-200">
                 {weather.humidity}%
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-              <div className="text-gray-500 dark:text-gray-400 text-xs uppercase font-medium">Pressure</div>
-              <div className="font-medium text-gray-800 dark:text-white">
+            <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded text-center">
+              <div className="text-blue-600 dark:text-blue-400 font-semibold">PRESSURE</div>
+              <div className="font-bold text-blue-800 dark:text-blue-200">
                 {weather.pressure} mb
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-              <div className="text-gray-500 dark:text-gray-400 text-xs uppercase font-medium">Visibility</div>
-              <div className="font-medium text-gray-800 dark:text-white">
+            <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded text-center">
+              <div className="text-blue-600 dark:text-blue-400 font-semibold">VISIBILITY</div>
+              <div className="font-bold text-blue-800 dark:text-blue-200">
                 {weather.visibility} mi
               </div>
             </div>
-          </div>
-
-          {/* Sun times */}
-          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-            <div className="flex justify-between items-center text-sm">
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Sunrise: </span>
-                <span className="font-medium text-gray-800 dark:text-white">{weather.sunrise}</span>
-              </div>
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Sunset: </span>
-                <span className="font-medium text-gray-800 dark:text-white">{weather.sunset}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Last updated */}
-          <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            Updated: {weather.lastUpdated}
           </div>
         </div>
       )}

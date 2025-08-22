@@ -130,30 +130,30 @@ const Staffing: React.FC<StaffingProps> = ({ className = '' }) => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="font-medium text-gray-900 dark:text-white">
+                            <div className="font-bold text-lg text-gray-900 dark:text-white">
                               {position.user.public_name}
                             </div>
                             {position.positionName && (
-                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                              <div className="text-sm font-semibold text-gray-600 dark:text-gray-300">
                                 {position.positionName}
                               </div>
                             )}
                           </div>
                           <div className="text-right">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            <div className="text-sm font-bold text-gray-900 dark:text-white">
                               Until {formatTime(position.endTime)}
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                            <div className="text-xs font-medium text-gray-600 dark:text-gray-300">
                               {formatTimeRange(position.startTime, position.endTime)}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center space-x-4 mt-2 text-xs font-medium text-gray-600 dark:text-gray-300">
                           {position.user.email && (
-                            <span>{position.user.email}</span>
+                            <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{position.user.email}</span>
                           )}
                           {position.user.phone && (
-                            <span>{position.user.phone}</span>
+                            <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{position.user.phone}</span>
                           )}
                         </div>
                       </div>

@@ -248,8 +248,8 @@ const Events: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-      <div className="flex justify-between items-center mb-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex flex-col h-full">
+      <div className="flex justify-between items-center mb-4 flex-shrink-0">
         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Upcoming Events</h2>
         <button
           onClick={() => setIsCalendarDrawerOpen(true)}
@@ -262,24 +262,26 @@ const Events: React.FC = () => {
         </button>
       </div>
       
-      <div className="space-y-3">
-        {events.length === 0 ? (
-          <div className="text-gray-600 dark:text-gray-300">No upcoming events</div>
-        ) : (
-          events.map((event) => (
-            <div key={event.id} className={`rounded-lg p-3 border-l-4 ${getEventColor(event)}`}>
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="font-medium">{event.summary}</div>
-                  <div className="text-sm opacity-80">{formatEventTime(event)}</div>
-                </div>
-                <div className="text-xs opacity-60 ml-2">
-                  {event.calendarSource === 'rentals' ? 'Rental' : 'Event'}
+      <div className="flex-1 overflow-y-auto">
+        <div className="space-y-3">
+          {events.length === 0 ? (
+            <div className="text-gray-600 dark:text-gray-300">No upcoming events</div>
+          ) : (
+            events.map((event) => (
+              <div key={event.id} className={`rounded-lg p-3 border-l-4 ${getEventColor(event)}`}>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="font-semibold text-base">{event.summary}</div>
+                    <div className="text-sm font-medium opacity-90">{formatEventTime(event)}</div>
+                  </div>
+                  <div className="text-xs font-medium opacity-75 ml-2 bg-black bg-opacity-10 px-2 py-1 rounded">
+                    {event.calendarSource === 'rentals' ? 'Rental' : 'Event'}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
       
       <CalendarDrawer

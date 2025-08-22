@@ -113,44 +113,24 @@ const ApparatusStatus: React.FC<ApparatusStatusProps> = ({ className = '' }) => 
     if (units.length === 0) return null
     
     return (
-      <div className="mb-6">
-        <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-3">{title}</h3>
-        <div className="grid gap-3 md:grid-cols-2">
+      <div className="mb-4">
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{title}</h3>
+        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4">
           {units.map((apparatus) => (
             <div
               key={apparatus.uuid}
-              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+              className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-700 rounded text-center"
             >
-              <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    {apparatus.unit_code}
-                  </span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getApparatusTypeColor(apparatus.use_code)}`}>
-                    {apparatus.use_name}
-                  </span>
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  {apparatus.name}
-                </div>
-                {apparatus.location && (
-                  <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                    📍 {apparatus.location}
-                  </div>
-                )}
+              <div className="font-bold text-sm text-gray-900 dark:text-white mb-1">
+                {apparatus.unit_code}
               </div>
-              <div className="text-right">
-                <button
-                  onClick={() => toggleApparatusStatus(apparatus.uuid)}
-                  className={`px-2 py-1 rounded-full text-xs font-medium transition-colors hover:opacity-80 ${getStatusColor(apparatus.status)}`}
-                  title="Click to change status"
-                >
-                  {getStatusText(apparatus.status)}
-                </button>
-                <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  {apparatus.last_updated}
-                </div>
-              </div>
+              <button
+                onClick={() => toggleApparatusStatus(apparatus.uuid)}
+                className={`px-2 py-1 rounded text-xs font-medium transition-colors hover:opacity-80 ${getStatusColor(apparatus.status)}`}
+                title="Click to change status"
+              >
+                {getStatusText(apparatus.status)}
+              </button>
             </div>
           ))}
         </div>
@@ -184,8 +164,8 @@ const ApparatusStatus: React.FC<ApparatusStatusProps> = ({ className = '' }) => 
         </div>
       ) : (
         <div className="flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto">
-            {renderApparatusGroup('Suppression', suppessionUnits)}
+          <div className="h-full overflow-y-auto space-y-4">
+            {renderApparatusGroup('Fire', suppessionUnits)}
             {renderApparatusGroup('EMS', emsUnits)}
             {renderApparatusGroup('Other', otherUnits)}
           </div>

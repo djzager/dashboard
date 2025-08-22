@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { Link, useLocation } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
@@ -5,11 +6,45 @@ import ThemeToggle from './ThemeToggle'
 const Header: React.FC = () => {
   const { user, logout } = useAuth()
   const location = useLocation()
+  const [isVisible, setIsVisible] = useState(false)
+  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null)
 
   const isActive = (path: string) => location.pathname === path
 
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // Show header when mouse is near the top of the screen
+      if (e.clientY < 100) {
+        setIsVisible(true)
+        // Clear any existing hide timeout
+        if (hideTimeout) {
+          clearTimeout(hideTimeout)
+          setHideTimeout(null)
+        }
+      } else if (e.clientY > 150) {
+        // Set timeout to hide header when mouse moves away from top
+        if (!hideTimeout) {
+          const timeout = setTimeout(() => {
+            setIsVisible(false)
+            setHideTimeout(null)
+          }, 2000) // Hide after 2 seconds
+          setHideTimeout(timeout)
+        }
+      }
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      if (hideTimeout) clearTimeout(hideTimeout)
+    }
+  }, [hideTimeout])
+
   return (
-    <header className="bg-red-600 dark:bg-red-700 text-white p-4 flex justify-between items-center">
+    <header className={`fixed top-0 left-0 right-0 bg-red-600 dark:bg-red-700 text-white p-4 flex justify-between items-center z-50 transition-transform duration-300 ease-in-out ${
+      isVisible ? 'translate-y-0' : '-translate-y-full'
+    }`}>
       <h1 className="text-2xl font-bold">Firehouse Dashboard</h1>
       
       <nav className="flex items-center space-x-6">
