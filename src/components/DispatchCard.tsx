@@ -2,7 +2,7 @@ import React from "react";
 import { getIncidentTypeColor, formatDispatchTime } from "../types/dispatch";
 import { Incident } from "../types/incident";
 import { isOurUnit } from "../utils/api";
-import { parseDispatchComments, getStatusColor, getUnitLatestStatus } from "../utils/dispatch-status";
+import { getUnitStatusFromCallNotes } from "../utils/dispatch-status";
 
 interface DispatchCardProps {
   incident: Incident;
@@ -19,12 +19,8 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
   const isOurUnitInvolved = isOurUnit(dispatch.unit_codes);
   const isClosed = dispatch.status_code === "closed";
   
-  // Parse dispatch comments to get unit statuses (only for open dispatches)
-  const unitStatuses = dispatch.status_code === 'open' && unitDispatch?.call_notes
-    ? parseDispatchComments(unitDispatch.call_notes, dispatch.unit_codes)
-    : new Map();
 
-  // Helper function to get the latest status for a unit
+  // Helper function to get the latest status for a responder (individual person)
   const getLatestStatus = (unit: any) => {
     if (!unit.statuses || unit.statuses.length === 0) return null;
     // Sort by created_at descending and take the first (most recent)
@@ -142,31 +138,31 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
 
           <div className="flex flex-wrap gap-1 mt-auto">
             {dispatch.unit_codes.map((unit) => {
-              const latestStatus = getUnitLatestStatus(unit, unitStatuses);
-              const statusColor = latestStatus ? getStatusColor(latestStatus.status) : null;
               const isOur = isOurUnit([unit]);
+              const unitStatus = getUnitStatusFromCallNotes(unit, unitDispatch?.call_notes || null, isOur);
               
               return (
                 <span
                   key={unit}
-                  className={`px-2 py-1 rounded text-xs font-medium border ${
-                    isOur
-                      ? statusColor 
-                        ? `${statusColor.className} border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800`
-                        : "bg-blue-500 text-white border-blue-600"
-                      : statusColor
-                        ? statusColor.className
+                  className={`px-3 py-2 rounded text-xs font-semibold border-2 ${
+                    unitStatus 
+                      ? `${unitStatus.className} ${unitStatus.borderClass}`
+                      : isOur
+                        ? "bg-blue-500 text-white border-blue-600"
                         : "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-500"
                   }`}
-                  title={latestStatus ? `${latestStatus.status}: ${latestStatus.timestamp}${latestStatus.location ? ` at ${latestStatus.location}` : ''}` : undefined}
                 >
                   <div className="flex flex-col items-center">
                     <div>{unit}</div>
-                    {latestStatus && statusColor && (
-                      <div className="text-xs opacity-90 mt-0.5">
-                        {statusColor.label}
+                    {unitStatus ? (
+                      <div className="text-xs mt-0.5 font-medium">
+                        {unitStatus.label}
                       </div>
-                    )}
+                    ) : isOur ? (
+                      <div className="text-xs mt-0.5 font-medium">
+                        Dispatched
+                      </div>
+                    ) : null}
                   </div>
                 </span>
               );
