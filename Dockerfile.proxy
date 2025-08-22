@@ -1,0 +1,19 @@
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy proxy source
+COPY netlify/functions/proxy.js ./proxy.js
+
+# Expose port
+EXPOSE 3001
+
+# Start the proxy server
+CMD ["node", "proxy.js"]
