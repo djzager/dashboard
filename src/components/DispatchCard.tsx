@@ -136,37 +136,66 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
             </div>
           )}
 
-          <div className="flex flex-wrap gap-1 mt-auto">
-            {dispatch.unit_codes.map((unit) => {
-              const isOur = isOurUnit([unit]);
-              const unitStatus = getUnitStatusFromCallNotes(unit, unitDispatch?.call_notes || null, isOur);
-              
+          {/* Units Grouped by Status */}
+          <div className="mt-auto">
+            {(() => {
+              // Group units by their status
+              const unitsByStatus = dispatch.unit_codes.reduce((groups, unit) => {
+                const isOur = isOurUnit([unit]);
+                const unitStatus = getUnitStatusFromCallNotes(unit, unitDispatch?.call_notes || null, isOur);
+                
+                // Normalize status labels - treat Available and Cleared as the same
+                let normalizedLabel = unitStatus ? unitStatus.label : (isOur ? "Dispatched" : "Dispatched");
+                if (normalizedLabel === "Available") {
+                  normalizedLabel = "Cleared";
+                }
+                
+                const statusConfig = {
+                  key: normalizedLabel,
+                  className: unitStatus ? unitStatus.className : (isOur ? "bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200" : "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200"),
+                  borderClass: unitStatus ? unitStatus.borderClass : (isOur ? "border-orange-300 dark:border-orange-600" : "border-gray-300 dark:border-gray-500"),
+                  priority: unitStatus ? (
+                    normalizedLabel === "On Scene" ? 1 :
+                    normalizedLabel === "Enroute" || normalizedLabel === "Responding" ? 2 :
+                    normalizedLabel === "Dispatched" ? 3 :
+                    normalizedLabel === "Cleared" ? 4 :
+                    5
+                  ) : 3
+                };
+                
+                if (!groups[normalizedLabel]) {
+                  groups[normalizedLabel] = { units: [], config: statusConfig };
+                }
+                groups[normalizedLabel].units.push({ unit, isOur, unitStatus });
+                
+                return groups;
+              }, {} as Record<string, { units: Array<{unit: string, isOur: boolean, unitStatus: any}>, config: any }>);
+
+              // Sort status groups by priority
+              const sortedStatusGroups = Object.entries(unitsByStatus).sort(([,a], [,b]) => a.config.priority - b.config.priority);
+
               return (
-                <span
-                  key={unit}
-                  className={`px-3 py-2 rounded text-xs font-semibold border-2 ${
-                    unitStatus 
-                      ? `${unitStatus.className} ${unitStatus.borderClass}`
-                      : isOur
-                        ? "bg-blue-500 text-white border-blue-600"
-                        : "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-500"
-                  }`}
-                >
-                  <div className="flex flex-col items-center">
-                    <div>{unit}</div>
-                    {unitStatus ? (
-                      <div className="text-xs mt-0.5 font-medium">
-                        {unitStatus.label}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {sortedStatusGroups.map(([statusName, group]) => (
+                    <div key={statusName} className="min-w-0">
+                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
+                        {statusName}
                       </div>
-                    ) : isOur ? (
-                      <div className="text-xs mt-0.5 font-medium">
-                        Dispatched
+                      <div className="flex flex-col gap-1">
+                        {group.units.map(({ unit, isOur, unitStatus }) => (
+                          <span
+                            key={unit}
+                            className={`px-2 py-1 rounded text-xs font-semibold border text-center ${group.config.className} ${group.config.borderClass}`}
+                          >
+                            {unit}
+                          </span>
+                        ))}
                       </div>
-                    ) : null}
-                  </div>
-                </span>
+                    </div>
+                  ))}
+                </div>
               );
-            })}
+            })()}
           </div>
         </div>
 

@@ -52,7 +52,7 @@ export const STATUS_COLORS: Record<string, StatusColorConfig> = {
   },
   'available': {
     className: 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-500',
-    label: 'Available'
+    label: 'Cleared'
   }
 }
 
@@ -227,8 +227,8 @@ export function getUnitStatusFromCallNotes(unitCode: string, callNotes: string |
       // Determine status based on keywords in the status text
       if (/available/i.test(statusText)) {
         return { 
-          status: 'available', 
-          label: 'Available', 
+          status: 'clear', 
+          label: 'Cleared', 
           className: 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200',
           borderClass: isOurUnit 
             ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
@@ -288,12 +288,12 @@ export function getUnitStatusFromCallNotes(unitCode: string, callNotes: string |
       
       // Default for unrecognized status
       return { 
-        status: 'unknown', 
-        label: 'Active', 
-        className: 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200',
+        status: 'dispatched', 
+        label: 'Dispatched', 
+        className: 'bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200',
         borderClass: isOurUnit 
           ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
-          : 'border-blue-300 dark:border-blue-600'
+          : 'border-orange-300 dark:border-orange-600'
       };
     }
   }

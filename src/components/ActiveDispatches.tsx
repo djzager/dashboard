@@ -335,7 +335,7 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
             <>
               {openIncidents.length > 0 && (
                 <span className="bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200 px-2 py-1 rounded-full text-xs font-medium">
-                  {openIncidents.length} Active
+                  {openIncidents.length} Dispatched
                 </span>
               )}
               {closedIncidents.length > 0 && (
