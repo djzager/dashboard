@@ -3,7 +3,11 @@ import { useAuth } from '../hooks/useAuth'
 import { Link, useLocation } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onVisibilityChange?: (isVisible: boolean) => void
+}
+
+const Header: React.FC<HeaderProps> = ({ onVisibilityChange }) => {
   const { user, logout } = useAuth()
   const location = useLocation()
   const [isVisible, setIsVisible] = useState(false)
@@ -16,6 +20,7 @@ const Header: React.FC = () => {
       // Show header when mouse is near the top of the screen
       if (e.clientY < 100) {
         setIsVisible(true)
+        onVisibilityChange?.(true)
         // Clear any existing hide timeout
         if (hideTimeout) {
           clearTimeout(hideTimeout)
@@ -26,6 +31,7 @@ const Header: React.FC = () => {
         if (!hideTimeout) {
           const timeout = setTimeout(() => {
             setIsVisible(false)
+            onVisibilityChange?.(false)
             setHideTimeout(null)
           }, 2000) // Hide after 2 seconds
           setHideTimeout(timeout)
@@ -42,7 +48,7 @@ const Header: React.FC = () => {
   }, [hideTimeout])
 
   return (
-    <header className={`fixed top-0 left-0 right-0 bg-red-600 dark:bg-red-700 text-white p-4 flex justify-between items-center z-50 transition-transform duration-300 ease-in-out ${
+    <header className={`fixed top-0 left-0 right-0 bg-red-600 dark:bg-red-700 text-white p-4 flex justify-between items-center z-10 transition-transform duration-300 ease-in-out ${
       isVisible ? 'translate-y-0' : '-translate-y-full'
     }`}>
       <h1 className="text-2xl font-bold">Firehouse Dashboard</h1>
