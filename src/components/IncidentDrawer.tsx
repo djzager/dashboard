@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Incident } from '../types/incident'
 import { UnitDispatch } from '../types/unit-dispatch'
-import { isOurUnit, fetchUnitsByDispatch } from '../utils/api'
+import { isOurUnit } from '../utils/api'
 import { parseDispatchComments, getStatusColor, getUnitLatestStatus, getUnitStatusFromCallNotes } from '../utils/dispatch-status'
 
 interface IncidentDrawerProps {
@@ -18,7 +18,6 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
   isNewDispatch = false 
 }) => {
   const [timeElapsed, setTimeElapsed] = useState(0)
-  const [loadingUnitDispatch, setLoadingUnitDispatch] = useState(false)
   const [drawerUnitDispatch, setDrawerUnitDispatch] = useState<UnitDispatch | null>(null)
 
   // Timer to track time since dispatch (for all open dispatches)
@@ -42,34 +41,15 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
     return () => clearInterval(interval)
   }, [isOpen, incident])
 
-  // Fetch unit dispatch data if not already available when drawer opens
+  // Set unit dispatch data when drawer opens (data is now pre-loaded)
   useEffect(() => {
     if (!isOpen || !incident) {
       setDrawerUnitDispatch(null)
       return
     }
 
-    // If we already have unit dispatch data, use it
-    if (incident.unitDispatch) {
-      setDrawerUnitDispatch(incident.unitDispatch)
-      return
-    }
-
-    // Otherwise, fetch it on-demand for this drawer view
-    const fetchUnitDispatchData = async () => {
-      setLoadingUnitDispatch(true)
-      try {
-        const unitDispatch = await fetchUnitsByDispatch(incident.dispatch.id)
-        setDrawerUnitDispatch(unitDispatch)
-      } catch (error) {
-        console.error('Failed to fetch unit dispatch data for drawer:', error)
-        setDrawerUnitDispatch(null)
-      } finally {
-        setLoadingUnitDispatch(false)
-      }
-    }
-
-    fetchUnitDispatchData()
+    // Use pre-loaded unit dispatch data
+    setDrawerUnitDispatch(incident.unitDispatch || null)
   }, [isOpen, incident])
 
   // Auto-close after 10 minutes for new dispatches
@@ -243,7 +223,7 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
             </div>
 
             {/* Unit Status Information */}
-            {loadingUnitDispatch ? (
+            {!unitDispatch ? (
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-3">Responder Status</h4>
                 <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
@@ -305,7 +285,7 @@ const IncidentDrawer: React.FC<IncidentDrawerProps> = ({
             )}
 
             {/* Dispatch Comments Timeline */}
-            {loadingUnitDispatch ? (
+            {!unitDispatch ? (
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-3">Dispatch Timeline</h4>
                 <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">

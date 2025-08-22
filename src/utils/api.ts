@@ -378,23 +378,15 @@ export const getIncidentPage = async (url?: string, since?: string): Promise<Inc
   try {
     const result = await fetchDispatchPage(url, since)
     
-    // Fetch fire incident and unit data only for open dispatches with our units
+    // Fetch unit data for all dispatches to get dispatch notes
     const incidents = await Promise.all(
       result.dispatches.map(async (dispatch) => {
-        if (dispatch.status_code === 'open') {
-          // Fetch unit dispatches for all open dispatches (since we need call_notes and responder info)
-          const unitDispatch = await fetchUnitsByDispatch(dispatch.id)
-          return {
-            dispatch,
-            fireIncident: undefined, // No longer fetching fire incidents
-            unitDispatch: unitDispatch || undefined
-          }
-        } else {
-          return {
-            dispatch,
-            fireIncident: undefined,
-            unitDispatch: undefined
-          }
+        // Always fetch unit dispatches since we need call_notes and responder info
+        const unitDispatch = await fetchUnitsByDispatch(dispatch.id)
+        return {
+          dispatch,
+          fireIncident: undefined, // No longer fetching fire incidents
+          unitDispatch: unitDispatch || undefined
         }
       })
     )
@@ -415,23 +407,15 @@ export const getIncidents = async (since?: string): Promise<Incident[]> => {
   try {
     const dispatches = await fetchDispatches(since)
     
-    // Fetch fire incident and unit data only for open dispatches with our units
+    // Fetch unit data for all dispatches to get dispatch notes
     const incidents = await Promise.all(
       dispatches.map(async (dispatch) => {
-        if (dispatch.status_code === 'open') {
-          // Fetch unit dispatches for all open dispatches (since we need call_notes and responder info)
-          const unitDispatch = await fetchUnitsByDispatch(dispatch.id)
-          return {
-            dispatch,
-            fireIncident: undefined, // No longer fetching fire incidents
-            unitDispatch: unitDispatch || undefined
-          }
-        } else {
-          return {
-            dispatch,
-            fireIncident: undefined,
-            unitDispatch: undefined
-          }
+        // Always fetch unit dispatches since we need call_notes and responder info
+        const unitDispatch = await fetchUnitsByDispatch(dispatch.id)
+        return {
+          dispatch,
+          fireIncident: undefined, // No longer fetching fire incidents
+          unitDispatch: unitDispatch || undefined
         }
       })
     )
