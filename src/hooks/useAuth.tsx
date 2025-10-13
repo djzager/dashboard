@@ -1,21 +1,18 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { CredentialResponse, useGoogleLogin } from '@react-oauth/google'
 import Cookies from 'js-cookie'
 
 interface User {
   email: string
   name: string
-  picture: string
+  fdToken: string
 }
 
 interface AuthContextType {
   user: User | null
-  accessToken: string | null
-  login: () => void
+  login: (email: string, password: string) => Promise<void>
   logout: () => void
   loading: boolean
-  handleCredentialResponse: (credentialResponse: CredentialResponse) => void
-  requestCalendarAccess: () => void
+  error: string | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -34,92 +31,88 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null)
-  const [accessToken, setAccessToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-
-  const googleLogin = useGoogleLogin({
-    onSuccess: (response) => {
-      console.log('Calendar OAuth success:', response)
-      setAccessToken(response.access_token)
-      Cookies.set('accessToken', response.access_token, { expires: 1 }) // Store for 1 day
-    },
-    onError: (error) => {
-      console.error('Google OAuth login error:', error)
-    },
-    scope: 'https://www.googleapis.com/auth/calendar.readonly'
-  })
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const savedUser = Cookies.get('user')
-    const savedToken = Cookies.get('accessToken')
-    
-    console.log('Auth loading - savedUser:', !!savedUser, 'savedToken:', !!savedToken)
-    
+
     if (savedUser) {
-      setUser(JSON.parse(savedUser))
-    }
-    if (savedToken) {
-      setAccessToken(savedToken)
+      try {
+        setUser(JSON.parse(savedUser))
+      } catch (err) {
+        console.error('Error parsing saved user:', err)
+        Cookies.remove('user')
+      }
     }
     setLoading(false)
   }, [])
 
-  const handleCredentialResponse = (credentialResponse: CredentialResponse) => {
-    if (!credentialResponse.credential) return
-    
+  const login = async (email: string, password: string) => {
+    setError(null)
+    setLoading(true)
+
     try {
-      const userObject = JSON.parse(atob(credentialResponse.credential.split('.')[1]))
-      
-      if (!userObject.email.endsWith('@reva16.org')) {
-        alert('Access restricted to reva16.org domain only')
-        return
+      // Get proxy URL
+      const proxyUrl = import.meta.env.PROD && window.location.hostname !== 'localhost'
+        ? window.location.origin
+        : import.meta.env.VITE_PROXY_URL || 'http://localhost:3001'
+
+      // Call auth endpoint through proxy to avoid CORS
+      const response = await fetch(`${proxyUrl}/api/auth/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          grant_type: 'client_credentials',
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Invalid credentials')
       }
 
+      const data = await response.json()
+
+      if (!data.access_token) {
+        throw new Error('No access token received from First Due')
+      }
+
+      // Create user object
       const userData: User = {
-        email: userObject.email,
-        name: userObject.name,
-        picture: userObject.picture
+        email,
+        name: email.split('@')[0], // Use email prefix as name
+        fdToken: data.access_token
       }
-      
-      setUser(userData)
-      Cookies.set('user', JSON.stringify(userData), { expires: 7 })
-      
-      // After successful login, also try to get calendar permissions
-      console.log('User logged in, requesting calendar permissions...')
-      // Use setTimeout to ensure this happens after the login flow completes
-      setTimeout(() => {
-        googleLogin()
-      }, 100)
-    } catch (error) {
-      console.error('Error parsing credential:', error)
-    }
-  }
 
-  const login = () => {
-    // Login is now handled by GoogleLogin component
-    console.log('Login triggered')
+      setUser(userData)
+      Cookies.set('user', JSON.stringify(userData), { expires: 7 }) // 7 days
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Login failed'
+      setError(errorMessage)
+      throw err
+    } finally {
+      setLoading(false)
+    }
   }
 
   const logout = () => {
     setUser(null)
-    setAccessToken(null)
+    setError(null)
     Cookies.remove('user')
-    Cookies.remove('accessToken')
-  }
-
-  const requestCalendarAccess = () => {
-    console.log('Manually requesting calendar access...')
-    googleLogin()
   }
 
   const value: AuthContextType = {
     user,
-    accessToken,
     login,
     logout,
     loading,
-    handleCredentialResponse,
-    requestCalendarAccess
+    error
   }
 
   return (

@@ -174,7 +174,7 @@ const Today: React.FC<TodayProps> = ({ className = "" }) => {
             <h3 className="font-semibold text-gray-900 dark:text-white">
               On Duty
             </h3>
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="text-md text-gray-600 dark:text-gray-400">
               {staffedPositions.length} Active
             </span>
           </div>
@@ -182,14 +182,14 @@ const Today: React.FC<TodayProps> = ({ className = "" }) => {
           {staffedPositions.length === 0 ? (
             <div className="text-center text-gray-500 dark:text-gray-400 py-4">
               <div className="text-2xl mb-1">👥</div>
-              <div className="text-sm">No one on duty</div>
+              <div className="text-lg">No one on duty</div>
             </div>
           ) : (
             <div className="space-y-3 max-h-48 overflow-y-auto">
               {Object.entries(groupedStaffing).map(
                 ([assignmentName, positions]) => (
                   <div key={assignmentName} className="space-y-2">
-                    <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
                       {assignmentName}
                     </h4>
                     {positions.map((position, index) => (
@@ -199,35 +199,21 @@ const Today: React.FC<TodayProps> = ({ className = "" }) => {
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
-                            <div className="font-bold text-sm text-gray-900 dark:text-white">
+                            <div className="font-bold text-lg text-gray-900 dark:text-white">
                               {position.user.public_name}
                               {position.positionName && (
-                                <span className="text-sm font-medium text-gray-600 dark:text-gray-300 ml-2">
+                                <span className="text-md font-medium text-gray-600 dark:text-gray-300 ml-2">
                                   ({position.positionName})
                                 </span>
                               )}
                             </div>
                           </div>
                           <div className="text-right ml-2">
-                            <div className="text-xs font-medium text-gray-900 dark:text-white">
+                            <div className="text-lg font-medium text-gray-900 dark:text-white">
                               Until {formatTime(position.endTime)}
                             </div>
                           </div>
                         </div>
-                        {(position.user.email || position.user.phone) && (
-                          <div className="flex items-center space-x-2 mt-2">
-                            {position.user.email && (
-                              <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs text-gray-600 dark:text-gray-300">
-                                {position.user.email}
-                              </span>
-                            )}
-                            {position.user.phone && (
-                              <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs text-gray-600 dark:text-gray-300">
-                                {position.user.phone}
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>

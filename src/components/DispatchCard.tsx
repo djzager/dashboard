@@ -64,35 +64,35 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
                   {dispatch.type}
                 </span>
                 <span
-                  className={`px-2 py-1 rounded text-xs font-medium border ${getIncidentTypeColor(
+                  className={`px-2 py-1 rounded text-xl font-medium border ${getIncidentTypeColor(
                     dispatch.incident_type_code
                   )}`}
                 >
                   {dispatch.incident_type_code}
                 </span>
-                <span className="bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xs font-mono">
+                <span className="bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xl font-mono">
                   Dispatch ID: {dispatch.id}
                 </span>
                 {/* Remove incident number display since we're eliminating fireIncident calls */}
                 {isOurUnitInvolved && (
-                  <span className="bg-blue-500 text-white px-2 py-1 rounded text-xs">
+                  <span className="bg-blue-500 text-white px-2 py-1 rounded text-xl">
                     OUR UNITS
                   </span>
                 )}
               </div>
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+            <span className="text-2xl text-gray-500 dark:text-gray-400 ml-2">
               {formatDispatchTime(dispatch.created_at)}
             </span>
           </div>
 
-          <div className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+          <div className="text-2xl text-gray-700 dark:text-gray-300 mb-3">
             <div className="font-medium">{dispatch.address}</div>
             <div>
               {dispatch.city}, {dispatch.state_code}
             </div>
             {dispatch.cross_streets && (
-              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              <div className="text-2xl text-gray-600 dark:text-gray-400 mt-1">
                 Near: {dispatch.cross_streets}
               </div>
             )}
@@ -101,21 +101,21 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
           {/* Responders Information */}
           {unitDispatch && unitDispatch.units && unitDispatch.units.length > 0 && (
             <div className="mb-3">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+              <h4 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
                 Responders
               </h4>
               <div className="space-y-1">
                 {unitDispatch.units.map((unit) => {
                   const latestStatus = getLatestStatus(unit);
                   return (
-                    <div key={unit.id} className="flex items-center justify-between text-sm">
+                    <div key={unit.id} className="flex items-center justify-between text-xl">
                       <span className="text-gray-700 dark:text-gray-300">
                         {unit.name}
                       </span>
                       {latestStatus && (
                         <div className="flex items-center gap-2">
                           <span 
-                            className={`px-2 py-1 rounded text-xs font-medium ${
+                            className={`px-2 py-1 rounded text-xl font-medium ${
                               latestStatus.status_code === 'on_scene' ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200' :
                               latestStatus.status_code === 'enroute' || latestStatus.status_code === 'responding' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200' :
                               latestStatus.status_code === 'complete' || latestStatus.status_code === 'cancel' ? 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200' :
@@ -124,7 +124,7 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
                           >
                             {latestStatus.name}
                           </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                          <span className="text-xl text-gray-500 dark:text-gray-400">
                             {formatStatusTime(latestStatus.created_at)}
                           </span>
                         </div>
@@ -178,14 +178,14 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {sortedStatusGroups.map(([statusName, group]) => (
                     <div key={statusName} className="min-w-0">
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
+                      <div className="text-xl font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
                         {statusName}
                       </div>
                       <div className="flex flex-col gap-1">
                         {group.units.map(({ unit, isOur, unitStatus }) => (
                           <span
                             key={unit}
-                            className={`px-2 py-1 rounded text-xs font-semibold border text-center ${group.config.className} ${group.config.borderClass}`}
+                            className={`px-2 py-1 rounded text-xl font-semibold border text-center ${group.config.className} ${group.config.borderClass}`}
                           >
                             {unit}
                           </span>
@@ -201,8 +201,8 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
 
         {/* Dispatch Comments - Right Side, Fixed Height with Scroll */}
         {unitDispatch?.call_notes && (
-          <div className="flex-1 border-l border-gray-200 dark:border-gray-600 pl-4 min-w-0 flex flex-col">
-            <div className="h-40 overflow-y-auto bg-gray-50 dark:bg-gray-800 rounded p-3 text-sm text-gray-700 dark:text-gray-300">
+          <div className="flex-1 border-l border-gray-200 dark:border-gray-600 pl-4 min-w-0">
+            <div className="h-80 overflow-y-auto bg-gray-50 dark:bg-gray-800 rounded p-3 text-xl text-gray-700 dark:text-gray-300">
               {unitDispatch.call_notes
                 .split(/\\n|\n/)
                 .map((line, index) => (

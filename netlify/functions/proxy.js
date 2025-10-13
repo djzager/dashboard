@@ -51,21 +51,63 @@ app.get('/weather', async (_req, res) => {
   }
 })
 
+const emailWhitelist = [
+  'dzager@reva16.org',
+]
+// Auth endpoint (no token required, returns token)
+app.post('/api/auth/token', async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    if (!emailWhitelist.includes(email)) {
+      return res.status(401).json({
+        error: 'Unauthorized'
+      })
+    }
+
+    const response = await fetch('https://sizeup.firstduesizeup.com/fd-api/v1/auth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ email, password, grant_type: 'client_credentials' })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      return res.status(response.status).json(errorData)
+    }
+
+    const data = await response.json()
+    res.json(data)
+
+  } catch (error) {
+    console.error('Auth proxy error:', error.message)
+    res.status(500).json({
+      error: 'Authentication failed',
+      details: error.message
+    })
+  }
+})
+
 // Proxy all FirstDue API endpoints
 app.use('/api', async (req, res) => {
   try {
-    const token = process.env.FD_TOKEN
-    
+    // Try to get token from request header (user's token) or fallback to env
+    const userToken = req.headers['x-fd-token']
+    const token = userToken || process.env.FD_TOKEN
+
     if (!token) {
-      return res.status(500).json({ 
-        error: 'FD_TOKEN not configured on server' 
+      return res.status(401).json({
+        error: 'No authentication token provided. Please log in.'
       })
     }
 
     // Remove '/api' prefix and forward to FirstDue
     const apiPath = req.path
     const apiUrl = `https://sizeup.firstduesizeup.com/fd-api/v1${apiPath}${req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''}`
-    
+
     const response = await fetch(apiUrl, {
       method: req.method,
       headers: {

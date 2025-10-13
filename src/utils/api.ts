@@ -5,6 +5,16 @@ import { Incident, IncidentPage } from '../types/incident'
 import { UnitDispatch } from '../types/unit-dispatch'
 import { ScheduleResponse, StaffedPosition } from '../types/schedule'
 
+export interface Station {
+  id: number
+  name: string
+  address?: string
+  city?: string
+  state?: string
+  latitude?: number
+  longitude?: number
+}
+
 // Use proxy server to avoid CORS issues
 // In production (Netlify), use the current origin for Netlify Functions
 // In development, use the local proxy server
@@ -18,6 +28,22 @@ const getProxyUrl = () => {
 }
 
 const PROXY_URL = getProxyUrl()
+
+// Get user token from cookies
+const getUserToken = (): string | null => {
+  const userCookie = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('user='))
+
+  if (!userCookie) return null
+
+  try {
+    const userData = JSON.parse(decodeURIComponent(userCookie.split('=')[1]))
+    return userData.fdToken || null
+  } catch {
+    return null
+  }
+}
 
 // Check if we should use mock data based on environment variable
 const shouldUseMockData = (): boolean => {
@@ -87,12 +113,18 @@ export const fetchDispatchPage = async (url?: string, since?: string): Promise<F
     }
 
     console.log('Fetching from URL:', requestUrl)
-    const response = await fetch(requestUrl, {
-      headers: {
-        'accept': 'application/json',
-        'content-type': 'application/json'
-      }
-    })
+
+    const token = getUserToken()
+    const headers: Record<string, string> = {
+      'accept': 'application/json',
+      'content-type': 'application/json'
+    }
+
+    if (token) {
+      headers['X-FD-Token'] = token
+    }
+
+    const response = await fetch(requestUrl, { headers })
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -161,15 +193,42 @@ export const fetchDispatches = async (since?: string): Promise<Dispatch[]> => {
 }
 
 // Station 16 unit codes
-export const STATION_16_UNITS = [
-  'ES16', 'A16', 'B16', 'CAR16', 'CMD16', 'MCU16', 'M16', 
+// Default units for Station 16
+const DEFAULT_STATION_16_UNITS = [
+  'ES16', 'A16', 'B16', 'CAR16', 'CMD16', 'MCU16', 'M16',
   'RE16', 'RP16', 'SERV16', 'ST16', 'K16', 'UT16', 'W16', 'FS16'
 ]
 
+// Get configured units from localStorage, fallback to defaults
+export const getConfiguredUnits = (): string[] => {
+  try {
+    const stored = localStorage.getItem('configured_units')
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (error) {
+    console.error('Failed to load configured units:', error)
+  }
+  return DEFAULT_STATION_16_UNITS
+}
+
+// Save configured units to localStorage
+export const saveConfiguredUnits = (units: string[]): void => {
+  try {
+    localStorage.setItem('configured_units', JSON.stringify(units))
+  } catch (error) {
+    console.error('Failed to save configured units:', error)
+  }
+}
+
 // Helper function to check if dispatch involves our units
 export const isOurUnit = (unitCodes: string[]): boolean => {
-  return unitCodes.some(code => STATION_16_UNITS.includes(code))
+  const configuredUnits = getConfiguredUnits()
+  return unitCodes.some(code => configuredUnits.includes(code))
 }
+
+// Legacy export for backward compatibility
+export const STATION_16_UNITS = DEFAULT_STATION_16_UNITS
 
 export const fetchApparatuses = async (): Promise<Apparatus[]> => {
   // Use mock data if environment variable is set
@@ -1137,4 +1196,75 @@ export const getCurrentlyStaffed = (scheduleData: ScheduleResponse): StaffedPosi
   }
   
   return staffed
+}
+
+// Fetch station information
+export const fetchStations = async (): Promise<Station[]> => {
+  try {
+    const token = getUserToken()
+    const headers: Record<string, string> = {
+      'accept': 'application/json',
+      'content-type': 'application/json'
+    }
+
+    if (token) {
+      headers['X-FD-Token'] = token
+    }
+
+    const response = await fetch(`${PROXY_URL}/api/stations`, { headers })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    // Handle different response formats
+    if (Array.isArray(data)) {
+      return data as Station[]
+    } else if (data.stations && Array.isArray(data.stations)) {
+      return data.stations as Station[]
+    } else if (data.list && Array.isArray(data.list)) {
+      return data.list as Station[]
+    }
+
+    console.warn('Unexpected stations API response format:', data)
+    return []
+  } catch (error) {
+    console.error('Failed to fetch stations:', error)
+    throw error
+  }
+}
+
+// Fetch dispatch unit codes
+export const fetchDispatchUnitCodes = async (): Promise<string[]> => {
+  try {
+    const token = getUserToken()
+    const headers: Record<string, string> = {
+      'accept': 'application/json',
+      'content-type': 'application/json'
+    }
+
+    if (token) {
+      headers['X-FD-Token'] = token
+    }
+
+    const response = await fetch(`${PROXY_URL}/api/dispatch-units/codes`, { headers })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    if (Array.isArray(data)) {
+      return data as string[]
+    }
+
+    console.warn('Unexpected dispatch units API response format:', data)
+    return []
+  } catch (error) {
+    console.error('Failed to fetch dispatch unit codes:', error)
+    throw error
+  }
 }

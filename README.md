@@ -13,7 +13,6 @@ Internal dashboard for fire department operations with Google OAuth authenticati
   - Real-time weather for Culpeper, VA (temperature, conditions, wind, humidity, pressure, visibility, sunrise/sunset)
   - Apparatus status
   - Active dispatches (real-time updates)
-- **Reports**: Generate and download various department reports
 - **Responsive Design**: Clean, simple interface using Tailwind CSS
 
 ## Setup
@@ -66,7 +65,6 @@ Internal dashboard for fire department operations with Google OAuth authenticati
 ## Pages
 
 - `/` - Main dashboard with grid layout
-- `/reports` - Report generation and management
 
 ## Tech Stack
 
