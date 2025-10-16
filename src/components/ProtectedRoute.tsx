@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import LoginButton from './LoginButton'
+import Login from './Login'
 
 interface ProtectedRouteProps {
   children: ReactNode
@@ -11,14 +11,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
   if (!user) {
-    return <LoginButton />
+    return <Login />
   }
 
   return <>{children}</>

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Incident } from "../types/incident";
-import { getIncidentPage, isOurUnit } from "../utils/api";
+import { getIncidentPage, isOurUnit, getConfiguredUnits, saveConfiguredUnits } from "../utils/api";
 import DispatchCard from "./DispatchCard";
-import IncidentDrawer from "./IncidentDrawer";
+import FirehouseDispatchModal from "./FirehouseDispatchModal";
 import TestDispatchModal from "./TestDispatchModal";
+import UnitConfigModal from "./UnitConfigModal";
 
 interface ActiveDispatchesProps {
   className?: string;
@@ -57,25 +58,26 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(
     null
   );
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewDispatch, setIsNewDispatch] = useState(false);
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
   // Check if we're using mock data
   const isUsingMockData = import.meta.env.VITE_USE_MOCK_DATA === "true";
 
-  // Drawer handlers
-  const handleDrawerClose = useCallback(() => {
-    setIsDrawerOpen(false);
+  // Modal handlers
+  const handleModalClose = useCallback(() => {
+    setIsModalOpen(false);
     setSelectedIncident(null);
     setIsNewDispatch(false);
   }, []);
 
-  const openIncidentDrawer = useCallback(
+  const openIncidentModal = useCallback(
     (incident: Incident, isNew = false) => {
       setSelectedIncident(incident);
       setIsNewDispatch(isNew);
-      setIsDrawerOpen(true);
+      setIsModalOpen(true);
     },
     []
   );
@@ -226,13 +228,13 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
       newOurUnitDispatches.length > 0 &&
       previousIncidentIds.current.size > 0
     ) {
-      // Show drawer for the first new dispatch with our units
+      // Show modal for the first new dispatch with our units
       const newDispatch = newOurUnitDispatches[0];
       console.log(
         "New dispatch with our units detected:",
         newDispatch.dispatch.id
       );
-      openIncidentDrawer(newDispatch, true);
+      openIncidentModal(newDispatch, true);
     }
 
     if (
@@ -346,6 +348,16 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
             </>
           )}
           <button
+            onClick={() => setIsConfigModalOpen(true)}
+            className="p-1 rounded text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            title="Configure units"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+          <button
             onClick={() => {
               const newSoundEnabled = !soundEnabled;
               setSoundEnabled(newSoundEnabled);
@@ -432,12 +444,12 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
                 <DispatchCard
                   key={incident.dispatch.id}
                   incident={incident}
-                  onClick={() => openIncidentDrawer(incident)}
+                  onClick={() => openIncidentModal(incident)}
                 />
               ))}
             </div>
 
-            {/* Divider */}
+            {/* Divider
             {closedIncidents.length > 0 && (
               <div className="flex items-center my-6">
                 <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
@@ -448,25 +460,25 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
               </div>
             )}
 
-            {/* Closed Incidents */}
+            Closed Incidents
             <div className="space-y-4">
               {closedIncidents.map((incident) => (
                 <DispatchCard
                   key={incident.dispatch.id}
                   incident={incident}
-                  onClick={() => openIncidentDrawer(incident)}
+                  onClick={() => openIncidentModal(incident)}
                 />
               ))}
-            </div>
+            </div> */}
           </div>
         </div>
       )}
 
-      {/* Incident Drawer */}
-      <IncidentDrawer
+      {/* Incident Modal */}
+      <FirehouseDispatchModal
         incident={selectedIncident}
-        isOpen={isDrawerOpen}
-        onClose={handleDrawerClose}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
         isNewDispatch={isNewDispatch}
       />
 
@@ -474,6 +486,18 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
       <TestDispatchModal
         isOpen={isTestModalOpen}
         onClose={() => setIsTestModalOpen(false)}
+      />
+
+      {/* Unit Configuration Modal */}
+      <UnitConfigModal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        selectedUnits={getConfiguredUnits()}
+        onSave={(units) => {
+          saveConfiguredUnits(units);
+          // Refresh to apply new filter
+          fetchFirstPage();
+        }}
       />
     </div>
   );

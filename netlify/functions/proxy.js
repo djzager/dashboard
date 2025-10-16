@@ -29,10 +29,10 @@ app.get('/weather', async (_req, res) => {
     // Coordinates for 18230 Birmingham Road, Culpeper, VA 22701
     const lat = 38.4707
     const lon = -78.0169
-    
+
     // Use Open-Meteo API (free, no API key required)
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`
-    
+
     const response = await fetch(weatherUrl)
 
     if (!response.ok) {
@@ -41,12 +41,52 @@ app.get('/weather', async (_req, res) => {
 
     const data = await response.json()
     res.json(data)
-    
+
   } catch (error) {
     console.error('Weather proxy error:', error.message)
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch weather data',
-      details: error.message 
+      details: error.message
+    })
+  }
+})
+
+const emailWhitelist = [
+  'dzager@reva16.org',
+]
+// Auth endpoint (no token required, returns token)
+app.post('/api/auth/token', async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    if (!emailWhitelist.includes(email)) {
+      return res.status(401).json({
+        error: 'Unauthorized'
+      })
+    }
+
+    const response = await fetch('https://sizeup.firstduesizeup.com/fd-api/v1/auth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ email, password, grant_type: 'client_credentials' })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      return res.status(response.status).json(errorData)
+    }
+
+    const data = await response.json()
+    res.json(data)
+
+  } catch (error) {
+    console.error('Auth proxy error:', error.message)
+    res.status(500).json({
+      error: 'Authentication failed',
+      details: error.message
     })
   }
 })
@@ -54,18 +94,20 @@ app.get('/weather', async (_req, res) => {
 // Proxy all FirstDue API endpoints
 app.use('/api', async (req, res) => {
   try {
-    const token = process.env.FD_TOKEN
-    
+    // Try to get token from request header (user's token) or fallback to env
+    const userToken = req.headers['x-fd-token']
+    const token = userToken || process.env.FD_TOKEN
+
     if (!token) {
-      return res.status(500).json({ 
-        error: 'FD_TOKEN not configured on server' 
+      return res.status(401).json({
+        error: 'No authentication token provided. Please log in.'
       })
     }
 
     // Remove '/api' prefix and forward to FirstDue
     const apiPath = req.path
     const apiUrl = `https://sizeup.firstduesizeup.com/fd-api/v1${apiPath}${req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''}`
-    
+
     const response = await fetch(apiUrl, {
       method: req.method,
       headers: {
