@@ -29,6 +29,102 @@ const getProxyUrl = () => {
 
 const PROXY_URL = getProxyUrl()
 
+// ArcGIS Box Code Service
+const ARCGIS_BOX_SERVICE_URL = 'https://services6.arcgis.com/AEbVX3DW2F4wnrFu/arcgis/rest/services/Geoprox_Outline/FeatureServer/13'
+
+interface BoxCodeResult {
+  box_code: string | null
+  cad_code: string | null
+  station: string | null
+  color: string | null
+}
+
+// Query ArcGIS service to get box code and color for a lat/lon point
+export const queryBoxCode = async (lat: number, lon: number): Promise<BoxCodeResult> => {
+  try {
+    const params = new URLSearchParams({
+      geometry: `${lon},${lat}`,
+      geometryType: 'esriGeometryPoint',
+      spatialRel: 'esriSpatialRelIntersects',
+      inSR: '4326', // WGS84 (standard lat/lon)
+      outFields: 'BOX,CADCODE,STATION',
+      returnGeometry: 'false',
+      f: 'json'
+    })
+
+    const url = `${ARCGIS_BOX_SERVICE_URL}/query?${params}`
+    console.log('ArcGIS query URL:', url)
+
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      console.warn(`ArcGIS box code query failed: ${response.status} ${response.statusText}`)
+      const errorText = await response.text()
+      console.warn('ArcGIS error response:', errorText)
+      return { box_code: null, cad_code: null, station: null, color: null }
+    }
+
+    const data = await response.json()
+    console.log('ArcGIS query response:', data)
+
+    if (data.error) {
+      console.warn('ArcGIS returned error:', data.error)
+      return { box_code: null, cad_code: null, station: null, color: null }
+    }
+
+    if (data.features && data.features.length > 0) {
+      const attributes = data.features[0].attributes
+      console.log('Found box code attributes:', attributes)
+      return {
+        box_code: attributes.BOX || null,
+        cad_code: attributes.CADCODE || null,
+        station: attributes.STATION || null,
+        color: null // Will be fetched from renderer info
+      }
+    }
+
+    console.log('No features found in ArcGIS response')
+    return { box_code: null, cad_code: null, station: null, color: null }
+  } catch (error) {
+    console.error('Failed to query box code:', error)
+    return { box_code: null, cad_code: null, station: null, color: null }
+  }
+}
+
+// Cache for box code colors
+let boxColorCache: Map<string, string> | null = null
+
+// Fetch box code color mapping from ArcGIS renderer
+export const getBoxCodeColor = async (cadCode: string): Promise<string | null> => {
+  // Initialize cache if needed
+  if (!boxColorCache) {
+    boxColorCache = new Map()
+
+    try {
+      const response = await fetch(`${ARCGIS_BOX_SERVICE_URL}?f=json`)
+      if (response.ok) {
+        const data = await response.json()
+
+        // Extract color mapping from renderer
+        if (data.drawingInfo?.renderer?.uniqueValueInfos) {
+          for (const valueInfo of data.drawingInfo.renderer.uniqueValueInfos) {
+            if (valueInfo.value && valueInfo.symbol?.color) {
+              const color = valueInfo.symbol.color
+              // Convert RGBA array to hex color
+              const hexColor = `#${color[0].toString(16).padStart(2, '0')}${color[1].toString(16).padStart(2, '0')}${color[2].toString(16).padStart(2, '0')}`
+              boxColorCache.set(valueInfo.value, hexColor)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch box code colors:', error)
+    }
+  }
+
+  return boxColorCache.get(cadCode) || null
+}
+
 // Get user token from cookies
 const getUserToken = (): string | null => {
   const userCookie = document.cookie
@@ -125,11 +221,11 @@ export const fetchDispatchPage = async (url?: string, since?: string): Promise<F
     }
 
     const response = await fetch(requestUrl, { headers })
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
-    
+
     const data = await response.json()
     let pageDispatches: Dispatch[] = []
     if (Array.isArray(data)) {
@@ -140,7 +236,25 @@ export const fetchDispatchPage = async (url?: string, since?: string): Promise<F
       console.warn('Unexpected API response format:', data)
       pageDispatches = []
     }
-  
+
+    // Enrich OPEN dispatches with box code information
+    const enrichedDispatches = await Promise.all(
+      pageDispatches.map(async (dispatch) => {
+        // Only fetch box codes for open dispatches
+        if (dispatch.status_code !== 'open') {
+          return dispatch
+        }
+
+        console.log(`Querying box code for dispatch ${dispatch.id} at ${dispatch.latitude}, ${dispatch.longitude}`)
+        const boxInfo = await queryBoxCode(dispatch.latitude, dispatch.longitude)
+        console.log(`Box code result for dispatch ${dispatch.id}:`, boxInfo)
+        return {
+          ...dispatch,
+          box_code: boxInfo.cad_code // Use CADCODE instead of BOX
+        }
+      })
+    )
+
     // Extract Link header for pagination
     const linkHeader = response.headers.get('link')
     let nextUrl: string | undefined = undefined
@@ -155,13 +269,13 @@ export const fetchDispatchPage = async (url?: string, since?: string): Promise<F
         }
       }
     }
-    
+
     // Convert FirstDue URL to proxy URL
     const nextPageUrl = nextUrl ? nextUrl.replace('https://sizeup.firstduesizeup.com/fd-api/v1', `${PROXY_URL}/api`) : undefined
-    
-    console.log(`Fetched ${pageDispatches.length} dispatches, hasMore: ${!!nextPageUrl}`)
+
+    console.log(`Fetched ${enrichedDispatches.length} dispatches, hasMore: ${!!nextPageUrl}`)
     return {
-      dispatches: pageDispatches,
+      dispatches: enrichedDispatches,
       nextPageUrl,
       hasMore: !!nextPageUrl
     }
@@ -511,7 +625,8 @@ const getMockData = (): Dispatch[] => {
       alarm_level: "2nd Alarm",
       incident_number: "24-5999",
       fire_zone: "Station 16 District",
-      fire_stations: ["Station 16", "Station 01"]
+      fire_stations: ["Station 16", "Station 01"],
+      box_code: "1601"
     },
     // 2) Open + not our units
     {
@@ -529,13 +644,14 @@ const getMockData = (): Dispatch[] => {
       unit_codes: ["E03", "A05", "M07"], // No Station 16 units
       incident_type_code: "CHEST",
       status_code: "open" as const,
-      xref_id: "CFS2576001", 
+      xref_id: "CFS2576001",
       created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
       radio_channel: "EMS-TAC-2",
       alarm_level: "1st Alarm",
       incident_number: "24-6001",
       fire_zone: "Station 03 District",
-      fire_stations: ["Station 03", "Station 05"]
+      fire_stations: ["Station 03", "Station 05"],
+      box_code: "0301"
     },
     // 3) Closed
     {
@@ -556,13 +672,13 @@ const getMockData = (): Dispatch[] => {
       xref_id: "CFS2575873",
       created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
       radio_channel: "FIRE-TAC-2",
-      alarm_level: "1st Alarm", 
+      alarm_level: "1st Alarm",
       incident_number: "24-5873",
       fire_zone: "Station 16 District",
       fire_stations: ["Station 16", "Station 12"]
     }
   ]
-  
+
   // Return runtime dispatches first, then static mock data
   return [...runtimeDispatches, ...staticMockData]
 }

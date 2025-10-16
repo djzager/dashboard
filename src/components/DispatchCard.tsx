@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { getIncidentTypeColor, formatDispatchTime } from "../types/dispatch";
 import { Incident } from "../types/incident";
 import { isOurUnit } from "../utils/api";
@@ -18,13 +18,13 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
   const { dispatch, unitDispatch } = incident;
   const isOurUnitInvolved = isOurUnit(dispatch.unit_codes);
   const isClosed = dispatch.status_code === "closed";
-  
+  const [isNotesExpanded, setIsNotesExpanded] = useState(false);
 
   // Helper function to get the latest status for a responder (individual person)
   const getLatestStatus = (unit: any) => {
     if (!unit.statuses || unit.statuses.length === 0) return null;
     // Sort by created_at descending and take the first (most recent)
-    const sortedStatuses = [...unit.statuses].sort((a, b) => 
+    const sortedStatuses = [...unit.statuses].sort((a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     return sortedStatuses[0];
@@ -42,80 +42,161 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
 
   return (
     <div
-      className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
+      className={`border-2 rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md ${
         isClosed
           ? "bg-gray-50 dark:bg-gray-800 opacity-75"
           : "bg-white dark:bg-gray-700"
       } ${
-        isOurUnitInvolved 
-          ? "border-blue-500 dark:border-blue-400 hover:border-blue-600 dark:hover:border-blue-300" 
+        isOurUnitInvolved
+          ? "border-blue-500 dark:border-blue-400 hover:border-blue-600 dark:hover:border-blue-300"
           : isClosed
             ? "border-gray-300 dark:border-gray-600"
             : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
       } ${className}`}
-      onClick={onClick}
     >
-      <div className="flex gap-4 h-full">
-        <div className="flex-1 flex flex-col">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium text-gray-900 dark:text-white">
-                  {dispatch.type}
-                </span>
-                <span
-                  className={`px-2 py-1 rounded text-xl font-medium border ${getIncidentTypeColor(
-                    dispatch.incident_type_code
-                  )}`}
-                >
-                  {dispatch.incident_type_code}
-                </span>
-                <span className="bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xl font-mono">
-                  Dispatch ID: {dispatch.id}
-                </span>
-                {/* Remove incident number display since we're eliminating fireIncident calls */}
-                {isOurUnitInvolved && (
-                  <span className="bg-blue-500 text-white px-2 py-1 rounded text-xl">
-                    OUR UNITS
+      <div className="p-4 cursor-pointer" onClick={onClick}>
+        <div className="flex gap-4">
+          {/* Left side - Main dispatch info */}
+          <div className="flex-1">
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-3xl font-bold ${getIncidentTypeColor(dispatch.incident_type_code)}`}>
+                    {dispatch.type}
                   </span>
-                )}
+                  {dispatch.box_code && (
+                    <div className="px-4 py-2 rounded-xl text-3xl font-black border-4 bg-yellow-400 dark:bg-yellow-500 border-yellow-600 dark:border-yellow-700 text-gray-900 shadow-lg">
+                      {dispatch.box_code}
+                    </div>
+                  )}
+                  {isOurUnitInvolved && (
+                    <span className="bg-blue-500 text-white px-2 py-1 rounded text-xl">
+                      OUR UNITS
+                    </span>
+                  )}
+                </div>
               </div>
+              <span className="text-2xl text-gray-500 dark:text-gray-400 ml-2">
+                {formatDispatchTime(dispatch.created_at)}
+              </span>
             </div>
-            <span className="text-2xl text-gray-500 dark:text-gray-400 ml-2">
-              {formatDispatchTime(dispatch.created_at)}
-            </span>
+
+            <div className="text-2xl text-gray-700 dark:text-gray-300 mb-3">
+              <div className="font-medium">{dispatch.address}</div>
+              <div>
+                {dispatch.city}, {dispatch.state_code}
+              </div>
+              {dispatch.cross_streets && (
+                <div className="text-2xl text-gray-600 dark:text-gray-400 mt-1">
+                  Near: {dispatch.cross_streets}
+                </div>
+              )}
+            </div>
+
+            {/* Units Grouped by Status */}
+            <div className="mt-3">
+              {(() => {
+                // If the call is closed, show all units as cleared without status grouping
+                if (isClosed) {
+                  return (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+                      {dispatch.unit_codes.map((unit) => {
+                        const isOur = isOurUnit([unit]);
+                        return (
+                          <span
+                            key={unit}
+                            className={`px-2 py-1 rounded text-xl font-semibold border text-center bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 ${
+                              isOur
+                                ? "border-blue-500 dark:border-blue-400"
+                                : "border-gray-300 dark:border-gray-500"
+                            }`}
+                          >
+                            {unit}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                // Group units by their status
+                const unitsByStatus = dispatch.unit_codes.reduce((groups, unit) => {
+                  const isOur = isOurUnit([unit]);
+                  const unitStatus = getUnitStatusFromCallNotes(unit, unitDispatch?.call_notes || null, isOur);
+
+                  // Normalize status labels - treat Available and Cleared as the same
+                  let normalizedLabel = unitStatus ? unitStatus.label : (isOur ? "Dispatched" : "Dispatched");
+                  if (normalizedLabel === "Available") {
+                    normalizedLabel = "Cleared";
+                  }
+
+                  const statusConfig = {
+                    key: normalizedLabel,
+                    className: unitStatus ? unitStatus.className : (isOur ? "bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200" : "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200"),
+                    borderClass: unitStatus ? unitStatus.borderClass : (isOur ? "border-orange-300 dark:border-orange-600" : "border-gray-300 dark:border-gray-500"),
+                    priority: unitStatus ? (
+                      normalizedLabel === "Dispatched" ? 1 :
+                      normalizedLabel === "Enroute" || normalizedLabel === "Responding" ? 2 :
+                      normalizedLabel === "On Scene" ? 3 :
+                      normalizedLabel === "Cleared" ? 4 :
+                      5
+                    ) : 1
+                  };
+
+                  if (!groups[normalizedLabel]) {
+                    groups[normalizedLabel] = { units: [], config: statusConfig };
+                  }
+                  groups[normalizedLabel].units.push({ unit, isOur, unitStatus });
+
+                  return groups;
+                }, {} as Record<string, { units: Array<{unit: string, isOur: boolean, unitStatus: any}>, config: any }>);
+
+                // Sort status groups by priority (Dispatched -> Enroute -> On Scene -> Cleared)
+                const sortedStatusGroups = Object.entries(unitsByStatus).sort(([,a], [,b]) => a.config.priority - b.config.priority);
+
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {sortedStatusGroups.map(([statusName, group]) => (
+                      <div key={statusName} className="min-w-0">
+                        <div className="text-xl font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
+                          {statusName}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {group.units.map(({ unit, isOur, unitStatus }) => (
+                            <span
+                              key={unit}
+                              className={`px-2 py-1 rounded text-xl font-semibold border text-center ${group.config.className} ${group.config.borderClass}`}
+                            >
+                              {unit}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
 
-          <div className="text-2xl text-gray-700 dark:text-gray-300 mb-3">
-            <div className="font-medium">{dispatch.address}</div>
-            <div>
-              {dispatch.city}, {dispatch.state_code}
-            </div>
-            {dispatch.cross_streets && (
-              <div className="text-2xl text-gray-600 dark:text-gray-400 mt-1">
-                Near: {dispatch.cross_streets}
-              </div>
-            )}
-          </div>
-
-          {/* Responders Information */}
+          {/* Right side - Responders */}
           {unitDispatch && unitDispatch.units && unitDispatch.units.length > 0 && (
-            <div className="mb-3">
-              <h4 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
+            <div className="w-96 border-l-4 border-gray-300 dark:border-gray-600 pl-4">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
                 Responders
-              </h4>
-              <div className="space-y-1">
+              </h3>
+              <div className="space-y-2">
                 {unitDispatch.units.map((unit) => {
                   const latestStatus = getLatestStatus(unit);
                   return (
-                    <div key={unit.id} className="flex items-center justify-between text-xl">
-                      <span className="text-gray-700 dark:text-gray-300">
+                    <div key={unit.id} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2">
+                      <div className="text-xl font-bold text-gray-900 dark:text-white mb-1">
                         {unit.name}
-                      </span>
+                      </div>
                       {latestStatus && (
-                        <div className="flex items-center gap-2">
-                          <span 
-                            className={`px-2 py-1 rounded text-xl font-medium ${
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`px-2 py-1 rounded text-sm font-medium ${
                               latestStatus.status_code === 'on_scene' ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200' :
                               latestStatus.status_code === 'enroute' || latestStatus.status_code === 'responding' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200' :
                               latestStatus.status_code === 'complete' || latestStatus.status_code === 'cancel' ? 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200' :
@@ -124,7 +205,7 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
                           >
                             {latestStatus.name}
                           </span>
-                          <span className="text-xl text-gray-500 dark:text-gray-400">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
                             {formatStatusTime(latestStatus.created_at)}
                           </span>
                         </div>
@@ -135,85 +216,53 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
               </div>
             </div>
           )}
+        </div>
+      </div>
 
-          {/* Units Grouped by Status */}
-          <div className="mt-auto">
-            {(() => {
-              // Group units by their status
-              const unitsByStatus = dispatch.unit_codes.reduce((groups, unit) => {
-                const isOur = isOurUnit([unit]);
-                const unitStatus = getUnitStatusFromCallNotes(unit, unitDispatch?.call_notes || null, isOur);
-                
-                // Normalize status labels - treat Available and Cleared as the same
-                let normalizedLabel = unitStatus ? unitStatus.label : (isOur ? "Dispatched" : "Dispatched");
-                if (normalizedLabel === "Available") {
-                  normalizedLabel = "Cleared";
-                }
-                
-                const statusConfig = {
-                  key: normalizedLabel,
-                  className: unitStatus ? unitStatus.className : (isOur ? "bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200" : "bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200"),
-                  borderClass: unitStatus ? unitStatus.borderClass : (isOur ? "border-orange-300 dark:border-orange-600" : "border-gray-300 dark:border-gray-500"),
-                  priority: unitStatus ? (
-                    normalizedLabel === "On Scene" ? 1 :
-                    normalizedLabel === "Enroute" || normalizedLabel === "Responding" ? 2 :
-                    normalizedLabel === "Dispatched" ? 3 :
-                    normalizedLabel === "Cleared" ? 4 :
-                    5
-                  ) : 3
-                };
-                
-                if (!groups[normalizedLabel]) {
-                  groups[normalizedLabel] = { units: [], config: statusConfig };
-                }
-                groups[normalizedLabel].units.push({ unit, isOur, unitStatus });
-                
-                return groups;
-              }, {} as Record<string, { units: Array<{unit: string, isOur: boolean, unitStatus: any}>, config: any }>);
-
-              // Sort status groups by priority
-              const sortedStatusGroups = Object.entries(unitsByStatus).sort(([,a], [,b]) => a.config.priority - b.config.priority);
-
-              return (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {sortedStatusGroups.map(([statusName, group]) => (
-                    <div key={statusName} className="min-w-0">
-                      <div className="text-xl font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
-                        {statusName}
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        {group.units.map(({ unit, isOur, unitStatus }) => (
-                          <span
-                            key={unit}
-                            className={`px-2 py-1 rounded text-xl font-semibold border text-center ${group.config.className} ${group.config.borderClass}`}
-                          >
-                            {unit}
-                          </span>
-                        ))}
-                      </div>
+      {/* Expandable Notes Drawer */}
+      {unitDispatch?.call_notes && (
+        <div className="border-t border-gray-200 dark:border-gray-600">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsNotesExpanded(!isNotesExpanded);
+            }}
+            className="w-full px-4 py-2 flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          >
+            <span className="text-lg font-medium text-gray-700 dark:text-gray-300">
+              Dispatch Notes
+            </span>
+            <svg
+              className={`w-5 h-5 text-gray-700 dark:text-gray-300 transition-transform ${
+                isNotesExpanded ? 'rotate-180' : ''
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+          {isNotesExpanded && (
+            <div className="px-4 pb-4">
+              <div className="max-h-60 overflow-y-auto bg-gray-50 dark:bg-gray-800 rounded p-3 text-lg text-gray-700 dark:text-gray-300">
+                {unitDispatch.call_notes
+                  .split(/\\n|\n/)
+                  .map((line, index) => (
+                    <div key={index} className="mb-1 last:mb-0">
+                      {line}
                     </div>
                   ))}
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-
-        {/* Dispatch Comments - Right Side, Fixed Height with Scroll */}
-        {unitDispatch?.call_notes && (
-          <div className="flex-1 border-l border-gray-200 dark:border-gray-600 pl-4 min-w-0">
-            <div className="h-80 overflow-y-auto bg-gray-50 dark:bg-gray-800 rounded p-3 text-xl text-gray-700 dark:text-gray-300">
-              {unitDispatch.call_notes
-                .split(/\\n|\n/)
-                .map((line, index) => (
-                  <div key={index} className="mb-1 last:mb-0">
-                    {line}
-                  </div>
-                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

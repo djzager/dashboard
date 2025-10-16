@@ -20,6 +20,7 @@ export interface Dispatch {
   incident_number: string | null
   fire_zone: string | null
   fire_stations: string[]
+  box_code?: string
 }
 
 export const getIncidentTypeColor = (incidentTypeCode: string): string => {

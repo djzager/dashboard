@@ -46,6 +46,10 @@ export const STATUS_COLORS: Record<string, StatusColorConfig> = {
     className: 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-600',
     label: 'Arrived'
   },
+  'transport_arrived': {
+    className: 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-600',
+    label: 'Transport Arrived'
+  },
   'clear': {
     className: 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-500',
     label: 'Cleared'
@@ -213,90 +217,148 @@ export interface UnitStatusResult {
 
 export function getUnitStatusFromCallNotes(unitCode: string, callNotes: string | null, isOurUnit: boolean, useRing: boolean = false): UnitStatusResult | null {
   if (!callNotes) return null;
-  
+
   // Split lines and process from most recent (first) to oldest
   const lines = callNotes.split(/\\n|\n/).filter(line => line.trim());
-  
+
   // Find first occurrence of this unit in the call notes
   for (const line of lines) {
-    // Look for pattern: "HH:MM:SS: UNIT, STATUS..." 
+    // Look for pattern: "HH:MM:SS: UNIT, STATUS..."
     const match = line.match(/^\d{2}:\d{2}:\d{2}:\s*([A-Z0-9]+),?\s*(.+)$/i);
     if (match && match[1].toUpperCase() === unitCode.toUpperCase()) {
       const statusText = match[2].trim();
-      
-      // Determine status based on keywords in the status text
-      if (/available/i.test(statusText)) {
-        return { 
-          status: 'clear', 
-          label: 'Cleared', 
+      const upperStatusText = statusText.toUpperCase();
+
+      // Priority 1: Check for COMPLETE/AVAILABLE first (highest priority)
+      if (upperStatusText.includes('COMPLETE') || upperStatusText.includes('AVAILABLE')) {
+        return {
+          status: 'clear',
+          label: 'Cleared',
           className: 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200',
-          borderClass: isOurUnit 
+          borderClass: isOurUnit
             ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
             : 'border-gray-300 dark:border-gray-500'
         };
       }
-      if (/transporting/i.test(statusText)) {
-        return { 
-          status: 'transporting', 
-          label: 'Transport', 
+
+      // Priority 2: Check for TRANSPORTING INDIVIDUAL (before general TRANSPORTING)
+      if (upperStatusText.includes('TRANSPORTING INDIVIDUAL')) {
+        return {
+          status: 'transporting',
+          label: 'Transport',
           className: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200',
-          borderClass: isOurUnit 
+          borderClass: isOurUnit
             ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
             : 'border-yellow-300 dark:border-yellow-600'
         };
       }
-      if (/on scene/i.test(statusText) || /arrived/i.test(statusText)) {
-        return { 
-          status: 'on_scene', 
-          label: 'On Scene', 
+
+      // Priority 3: Check for general TRANSPORTING
+      if (upperStatusText.includes('TRANSPORTING')) {
+        return {
+          status: 'transporting',
+          label: 'Transport',
+          className: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200',
+          borderClass: isOurUnit
+            ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
+            : 'border-yellow-300 dark:border-yellow-600'
+        };
+      }
+
+      // Priority 4: Check for ARRIVED AT (with special handling for hospital/LZ)
+      if (upperStatusText.includes('ARRIVED AT')) {
+        if (upperStatusText.includes('HOSPITAL') || upperStatusText.includes('LZ')) {
+          return {
+            status: 'transport_arrived',
+            label: 'Transport Arrived',
+            className: 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200',
+            borderClass: isOurUnit
+              ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
+              : 'border-blue-300 dark:border-blue-600'
+          };
+        } else {
+          return {
+            status: 'on_scene',
+            label: 'On Scene',
+            className: 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200',
+            borderClass: isOurUnit
+              ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
+              : 'border-red-300 dark:border-red-600'
+          };
+        }
+      }
+
+      // Priority 5: Check for UNIT ON LOCATION
+      if (upperStatusText.includes('UNIT ON LOCATION')) {
+        return {
+          status: 'on_scene',
+          label: 'On Scene',
           className: 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200',
-          borderClass: isOurUnit 
+          borderClass: isOurUnit
             ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
             : 'border-red-300 dark:border-red-600'
         };
       }
-      if (/enroute/i.test(statusText) || /en route/i.test(statusText)) {
-        return { 
-          status: 'enroute', 
-          label: 'Enroute', 
+
+      // Priority 6: Check for ON SCENE
+      if (upperStatusText.includes('ON SCENE')) {
+        return {
+          status: 'on_scene',
+          label: 'On Scene',
+          className: 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200',
+          borderClass: isOurUnit
+            ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
+            : 'border-red-300 dark:border-red-600'
+        };
+      }
+
+      // Priority 7: Check for UNIT DISPATCHED & ARRIVED ON SCENE
+      if (upperStatusText.includes('UNIT DISPATCHED & ARRIVED ON SCENE')) {
+        return {
+          status: 'on_scene',
+          label: 'On Scene',
+          className: 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200',
+          borderClass: isOurUnit
+            ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
+            : 'border-red-300 dark:border-red-600'
+        };
+      }
+
+      // Priority 8: Check for ENROUTE
+      if (upperStatusText.includes('ENROUTE')) {
+        return {
+          status: 'enroute',
+          label: 'Enroute',
           className: 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200',
-          borderClass: isOurUnit 
+          borderClass: isOurUnit
             ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
             : 'border-green-300 dark:border-green-600'
         };
       }
-      if (/dispatched/i.test(statusText)) {
-        return { 
-          status: 'dispatched', 
-          label: 'Dispatched', 
+
+      // Priority 9: Check for UNIT DISPATCHED or DISPATCHED
+      if (upperStatusText.includes('UNIT DISPATCHED') || upperStatusText.includes('DISPATCHED')) {
+        return {
+          status: 'dispatched',
+          label: 'Dispatched',
           className: 'bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200',
-          borderClass: isOurUnit 
+          borderClass: isOurUnit
             ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
             : 'border-orange-300 dark:border-orange-600'
         };
       }
-      if (/clear/i.test(statusText) || /complete/i.test(statusText)) {
-        return { 
-          status: 'clear', 
-          label: 'Cleared', 
-          className: 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200',
-          borderClass: isOurUnit 
-            ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
-            : 'border-gray-300 dark:border-gray-500'
-        };
-      }
-      
+
       // Default for unrecognized status
-      return { 
-        status: 'dispatched', 
-        label: 'Dispatched', 
+      return {
+        status: 'dispatched',
+        label: 'Dispatched',
         className: 'bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200',
-        borderClass: isOurUnit 
+        borderClass: isOurUnit
           ? useRing ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-500 dark:border-blue-400'
           : 'border-orange-300 dark:border-orange-600'
       };
     }
   }
-  
+
   return null;
 }

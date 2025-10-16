@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Incident } from "../types/incident";
 import { getIncidentPage, isOurUnit, getConfiguredUnits, saveConfiguredUnits } from "../utils/api";
 import DispatchCard from "./DispatchCard";
-import IncidentDrawer from "./IncidentDrawer";
+import FirehouseDispatchModal from "./FirehouseDispatchModal";
 import TestDispatchModal from "./TestDispatchModal";
 import UnitConfigModal from "./UnitConfigModal";
 
@@ -58,7 +58,7 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(
     null
   );
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewDispatch, setIsNewDispatch] = useState(false);
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
@@ -66,18 +66,18 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
   // Check if we're using mock data
   const isUsingMockData = import.meta.env.VITE_USE_MOCK_DATA === "true";
 
-  // Drawer handlers
-  const handleDrawerClose = useCallback(() => {
-    setIsDrawerOpen(false);
+  // Modal handlers
+  const handleModalClose = useCallback(() => {
+    setIsModalOpen(false);
     setSelectedIncident(null);
     setIsNewDispatch(false);
   }, []);
 
-  const openIncidentDrawer = useCallback(
+  const openIncidentModal = useCallback(
     (incident: Incident, isNew = false) => {
       setSelectedIncident(incident);
       setIsNewDispatch(isNew);
-      setIsDrawerOpen(true);
+      setIsModalOpen(true);
     },
     []
   );
@@ -228,13 +228,13 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
       newOurUnitDispatches.length > 0 &&
       previousIncidentIds.current.size > 0
     ) {
-      // Show drawer for the first new dispatch with our units
+      // Show modal for the first new dispatch with our units
       const newDispatch = newOurUnitDispatches[0];
       console.log(
         "New dispatch with our units detected:",
         newDispatch.dispatch.id
       );
-      openIncidentDrawer(newDispatch, true);
+      openIncidentModal(newDispatch, true);
     }
 
     if (
@@ -444,12 +444,12 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
                 <DispatchCard
                   key={incident.dispatch.id}
                   incident={incident}
-                  onClick={() => openIncidentDrawer(incident)}
+                  onClick={() => openIncidentModal(incident)}
                 />
               ))}
             </div>
 
-            {/* Divider */}
+            {/* Divider
             {closedIncidents.length > 0 && (
               <div className="flex items-center my-6">
                 <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
@@ -460,25 +460,25 @@ const ActiveDispatches: React.FC<ActiveDispatchesProps> = ({
               </div>
             )}
 
-            {/* Closed Incidents */}
+            Closed Incidents
             <div className="space-y-4">
               {closedIncidents.map((incident) => (
                 <DispatchCard
                   key={incident.dispatch.id}
                   incident={incident}
-                  onClick={() => openIncidentDrawer(incident)}
+                  onClick={() => openIncidentModal(incident)}
                 />
               ))}
-            </div>
+            </div> */}
           </div>
         </div>
       )}
 
-      {/* Incident Drawer */}
-      <IncidentDrawer
+      {/* Incident Modal */}
+      <FirehouseDispatchModal
         incident={selectedIncident}
-        isOpen={isDrawerOpen}
-        onClose={handleDrawerClose}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
         isNewDispatch={isNewDispatch}
       />
 
