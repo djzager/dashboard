@@ -79,20 +79,20 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
                   )}
                 </div>
               </div>
-              <span className="text-2xl text-gray-500 dark:text-gray-400 ml-2">
+              <span className="text-2xl text-gray-500 dark:text-gray-200 ml-2">
                 {formatDispatchTime(dispatch.created_at)}
               </span>
             </div>
 
-            <div className="text-2xl text-gray-700 dark:text-gray-300 mb-3">
+            <div className="text-2xl text-gray-700 dark:text-gray-100 mb-3">
               <div className="font-medium">{dispatch.address}</div>
-              {dispatch.city && dispatch.state_code && (
+              {/* {dispatch.city && dispatch.state_code && (
                 <div>
                   {dispatch.city}, {dispatch.state_code}
                 </div>
-              )}
+              )} */}
               {dispatch.cross_streets && (
-                <div className="text-2xl text-gray-600 dark:text-gray-400 mt-1">
+                <div className="text-2xl text-gray-600 dark:text-gray-200 mt-1">
                   Near: {dispatch.cross_streets}
                 </div>
               )}
@@ -221,7 +221,7 @@ const DispatchCard: React.FC<DispatchCardProps> = ({
                           {group.units.map(({ unit }) => (
                             <span
                               key={unit}
-                              className={`px-2 py-1 rounded-full text-sm font-semibold border ${group.config.className} ${group.config.borderClass}`}
+                              className={`px-2 py-1 rounded-full text-2xl font-semibold border ${group.config.className} ${group.config.borderClass}`}
                             >
                               {unit}
                             </span>
