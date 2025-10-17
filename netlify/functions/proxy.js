@@ -119,6 +119,11 @@ app.use('/api', async (req, res) => {
     })
 
     if (!response.ok) {
+      console.error('FirstDue API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: apiUrl
+      })
       throw new Error(`FirstDue API error: ${response.status} ${response.statusText}`)
     }
 
