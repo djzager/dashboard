@@ -351,14 +351,19 @@ export const fetchApparatuses = async (): Promise<Apparatus[]> => {
   }
 
   try {
+    const token = getUserToken()
+    const headers: Record<string, string> = {
+      'accept': 'application/json',
+      'content-type': 'application/json'
+    }
+
+    if (token) {
+      headers['X-FD-Token'] = token
+    }
+
     const response = await fetch(
       `${PROXY_URL}/api/apparatuses`,
-      {
-        headers: {
-          'accept': 'application/json',
-          'content-type': 'application/json'
-        }
-      }
+      { headers }
     )
     
     if (!response.ok) {
@@ -426,14 +431,19 @@ export const fetchFireIncident = async (xrefId: string): Promise<FireIncident | 
   }
 
   try {
+    const token = getUserToken()
+    const headers: Record<string, string> = {
+      'accept': 'application/json',
+      'content-type': 'application/json'
+    }
+
+    if (token) {
+      headers['X-FD-Token'] = token
+    }
+
     const response = await fetch(
       `${PROXY_URL}/api/fire-incidents?incident_number=${xrefId}`,
-      {
-        headers: {
-          'accept': 'application/json',
-          'content-type': 'application/json'
-        }
-      }
+      { headers }
     )
     
     if (!response.ok) {
@@ -510,14 +520,19 @@ export const fetchUnitsByDispatch = async (dispatchId: number): Promise<UnitDisp
   }
 
   try {
+    const token = getUserToken()
+    const headers: Record<string, string> = {
+      'accept': 'application/json',
+      'content-type': 'application/json'
+    }
+
+    if (token) {
+      headers['X-FD-Token'] = token
+    }
+
     const response = await fetch(
       `${PROXY_URL}/api/get-units-by-dispatches?dispatch_id=${dispatchId}`,
-      {
-        headers: {
-          'accept': 'application/json',
-          'content-type': 'application/json'
-        }
-      }
+      { headers }
     )
     
     if (!response.ok) {
@@ -1258,13 +1273,23 @@ export const fetchCurrentSchedule = async (): Promise<ScheduleResponse> => {
     const today = new Date()
     const start = encodeURIComponent(`${formatScheduleDate(today)}T00:00:00Z`)
     const end = encodeURIComponent(`${formatScheduleDate(today)}T23:59:59Z`)
-    
-    const response = await fetch(`${PROXY_URL}/api/schedule?start=${start}&end=${end}`)
-    
+
+    const token = getUserToken()
+    const headers: Record<string, string> = {
+      'accept': 'application/json',
+      'content-type': 'application/json'
+    }
+
+    if (token) {
+      headers['X-FD-Token'] = token
+    }
+
+    const response = await fetch(`${PROXY_URL}/api/schedule?start=${start}&end=${end}`, { headers })
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    
+
     const data: ScheduleResponse = await response.json()
     return data
   } catch (error) {
